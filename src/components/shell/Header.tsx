@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { ProfileSheet } from "@/components/shell/ProfileSheet";
@@ -25,8 +26,11 @@ export function Header({
   avatarEmoji,
   accentColor,
 }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
   const { hasUnreadChat } = useChatUnread();
+  const onChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
 
   return (
     <>
@@ -52,53 +56,73 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/chat"
-            aria-label={hasUnreadChat ? "Chat, unread messages" : "Chat"}
-            className="kz-chunky font-display relative grid place-items-center"
-            style={{
-              width: 40,
-              height: 40,
-              padding: 0,
-              background: `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`,
-              color: "#fff",
-            }}
-          >
-            <MessageCircle size={18} strokeWidth={2.4} />
-            {hasUnreadChat ? (
-              <span
-                className="absolute"
+          {onChatRoute ? (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Back"
+              className="kz-chunky font-display grid place-items-center"
+              style={{
+                width: 40,
+                height: 40,
+                padding: 0,
+                background: "#fff",
+                color: PALETTE.ink,
+              }}
+            >
+              <ChevronLeft size={22} strokeWidth={2.6} />
+            </button>
+          ) : (
+            <>
+              <Link
+                href="/chat"
+                aria-label={hasUnreadChat ? "Chat, unread messages" : "Chat"}
+                className="kz-chunky font-display relative grid place-items-center"
                 style={{
-                  top: 4,
-                  right: 4,
-                  width: 10,
-                  height: 10,
-                  borderRadius: 99,
-                  background: PALETTE.sun,
-                  border: `2px solid ${PALETTE.ink}`,
-                  boxShadow: `0 1px 0 ${PALETTE.ink}`,
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  background: `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`,
+                  color: "#fff",
                 }}
-              />
-            ) : null}
-          </Link>
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            aria-label="Profile"
-            className="grid place-items-center"
-            style={{
-              width: 40,
-              height: 40,
-              padding: 0,
-              borderRadius: 999,
-              background: "transparent",
-              border: "none",
-              cursor: "pointer",
-              boxShadow: `0 3px 0 ${PALETTE.ink}`,
-            }}
-          >
-            <Avatar emoji={avatarEmoji} color={accentColor} size={40} />
-          </button>
+              >
+                <MessageCircle size={18} strokeWidth={2.4} />
+                {hasUnreadChat ? (
+                  <span
+                    className="absolute"
+                    style={{
+                      top: 4,
+                      right: 4,
+                      width: 10,
+                      height: 10,
+                      borderRadius: 99,
+                      background: PALETTE.sun,
+                      border: `2px solid ${PALETTE.ink}`,
+                      boxShadow: `0 1px 0 ${PALETTE.ink}`,
+                    }}
+                  />
+                ) : null}
+              </Link>
+              <button
+                type="button"
+                onClick={() => setProfileOpen(true)}
+                aria-label="Profile"
+                className="grid place-items-center"
+                style={{
+                  width: 40,
+                  height: 40,
+                  padding: 0,
+                  borderRadius: 999,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  boxShadow: `0 3px 0 ${PALETTE.ink}`,
+                }}
+              >
+                <Avatar emoji={avatarEmoji} color={accentColor} size={40} />
+              </button>
+            </>
+          )}
         </div>
       </header>
 

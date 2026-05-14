@@ -8,6 +8,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { useChatUnread } from "@/components/shell/ChatUnreadContext";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
+import { ChatPushNotificationsBar } from "@/components/chat/ChatPushNotificationsBar";
 import type { Message, Profile } from "@/lib/supabase/types";
 
 type Props = {
@@ -113,18 +114,6 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
               halo={false}
             />
           </div>
-          <span
-            style={{
-              position: "absolute",
-              bottom: 0,
-              right: 0,
-              width: 14,
-              height: 14,
-              borderRadius: 99,
-              background: PALETTE.grass,
-              border: `2px solid ${PALETTE.ink}`,
-            }}
-          />
         </div>
         <div className="min-w-0 flex-1">
           <div
@@ -134,14 +123,10 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
             {partnerName.toUpperCase()}
             <Heart size={14} color={PALETTE.blush} fill={PALETTE.blush} />
           </div>
-          <div
-            className="mt-1 text-[11px] font-bold"
-            style={{ color: PALETTE.grass }}
-          >
-            ● online · in Kinzville
-          </div>
         </div>
       </div>
+
+      <ChatPushNotificationsBar />
 
       <div
         ref={scrollerRef}
