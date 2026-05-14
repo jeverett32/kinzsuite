@@ -184,22 +184,29 @@ function Wheel({
         }}
       />
 
-      <svg
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
-        width={SIZE}
-        height={SIZE}
+      <div
         style={{
           position: "absolute",
           top: WHEEL_TOP,
           left: "50%",
           marginLeft: -SIZE / 2,
+          width: SIZE,
+          height: SIZE,
+          filter: `drop-shadow(0 6px 0 ${PALETTE.ink}) drop-shadow(0 12px 12px rgba(0,0,0,0.25))`,
+          zIndex: 3,
+        }}
+      >
+      <svg
+        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        width={SIZE}
+        height={SIZE}
+        style={{
+          display: "block",
           transform: `rotate(${rotation}deg)`,
           transformOrigin: "50% 50%",
           transition: spinning
             ? "transform 4.2s cubic-bezier(0.17, 0.67, 0.32, 1.18)"
             : "none",
-          filter: `drop-shadow(0 6px 0 ${PALETTE.ink}) drop-shadow(0 12px 12px rgba(0,0,0,0.25))`,
-          zIndex: 3,
         }}
       >
         <circle cx={cx} cy={cy} r={rOuter} fill="#fff" stroke={PALETTE.ink} strokeWidth={3} />
@@ -262,6 +269,7 @@ function Wheel({
           WOW!
         </text>
       </svg>
+      </div>
 
       <button
         onClick={spin}
