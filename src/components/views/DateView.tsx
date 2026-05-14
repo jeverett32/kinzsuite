@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
+import { createClient } from "@/lib/supabase/client";
+import { STATIC_QUESTS_FALLBACK, type Quest } from "@/lib/quests";
 import { PALETTE } from "@/lib/utils";
-import { QUESTS, type Quest } from "@/lib/quests";
+import type { WheelQuest } from "@/lib/supabase/types";
 
 const SLICE_COLORS = [
   "#E94B7B", "#E2553A", "#F0A93A", "#F2D24B",
@@ -15,6 +17,21 @@ const SLICE_COLORS = [
 function polar(cx: number, cy: number, r: number, deg: number) {
   const rad = ((deg - 90) * Math.PI) / 180;
   return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function toQuestList(rows: WheelQuest[]): Quest[] {
+  if (rows.length > 0) {
+    return [...rows]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((r) => ({
+        id: r.id,
+        tag: r.tag,
+        title: r.title,
+        detail: r.detail,
+        accent: r.accent,
+      }));
+  }
+  return STATIC_QUESTS_FALLBACK.map((q, i) => ({ ...q, id: `fallback-${i}` }));
 }
 
 function Wheel({
@@ -27,7 +44,7 @@ function Wheel({
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const N = quests.length;
-  const slice = 360 / N;
+  const slice = N > 0 ? 360 / N : 0;
   const SIZE = 280;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
@@ -36,7 +53,7 @@ function Wheel({
   const rHub = 38;
 
   function spin() {
-    if (spinning) return;
+    if (spinning || N < 1) return;
     const target = Math.floor(Math.random() * N);
     const turns = 5 + Math.floor(Math.random() * 3);
     const targetCenter = target * slice + slice / 2;
@@ -49,6 +66,19 @@ function Wheel({
       setSpinning(false);
       onLand(target);
     }, 4300);
+  }
+
+  if (N < 1) {
+    return (
+      <div
+        className="kz-sticker mx-auto max-w-sm rounded-3xl p-6 text-center"
+        style={{ ["--ink" as never]: PALETTE.ink }}
+      >
+        <p className="font-hand text-base" style={{ color: PALETTE.ink, opacity: 0.75 }}>
+          No wheel quests yet. Add some in Administration.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -111,7 +141,7 @@ function Wheel({
           const mid = start + slice / 2;
           const labelPos = polar(cx, cy, rRim - 26, mid);
           return (
-            <g key={i}>
+            <g key={q.id ?? i}>
               <path
                 d={path}
                 fill={SLICE_COLORS[i % SLICE_COLORS.length]}
@@ -179,9 +209,57 @@ function Wheel({
   );
 }
 
-export function DateView() {
+type Props = {
+  initialWheelQuests: WheelQuest[];
+};
+
+export function DateView({ initialWheelQuests }: Props) {
+  const supabase = useMemo(() => createClient(), []);
+  const [quests, setQuests] = useState<Quest[]>(() => toQuestList(initialWheelQuests));
+
+  useEffect(() => {
+    setQuests(toQuestList(initialWheelQuests));
+  }, [initialWheelQuests]);
+
+  useEffect(() => {
+    async function reload() {
+      const { data } = await supabase.from("wheel_quests").select("*").order("sort_order");
+      setQuests(toQuestList(data ?? []));
+    }
+
+    const channel = supabase
+      .channel("wheel_quests")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "wheel_quests" },
+        () => {
+          void reload();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
+
   const [questIdx, setQuestIdx] = useState(0);
-  const current = QUESTS[questIdx];
+
+  useEffect(() => {
+    setQuestIdx((i) => Math.min(i, Math.max(0, quests.length - 1)));
+  }, [quests.length]);
+
+  const current = quests[questIdx] ?? quests[0];
+
+  if (!current) {
+    return (
+      <div className="px-4 pb-6 pt-1">
+        <p className="text-center font-hand text-base text-white" style={{ textShadow: `0 2px 0 ${PALETTE.ink}` }}>
+          No quests to show.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pb-6 pt-1">
@@ -201,12 +279,12 @@ export function DateView() {
       </div>
 
       <div className="relative pb-3.5 pt-1.5">
-        <Wheel quests={QUESTS} onLand={setQuestIdx} />
+        <Wheel quests={quests} onLand={setQuestIdx} />
       </div>
 
       <div
         className="kz-sticker mt-2 rounded-[22px] p-4"
-        style={{ ["--ink" as any]: PALETTE.ink }}
+        style={{ ["--ink" as never]: PALETTE.ink }}
       >
         <div className="mb-1.5 flex items-center justify-between">
           <div

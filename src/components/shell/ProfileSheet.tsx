@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X, LogOut, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { X, LogOut, Save, Settings } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { Avatar, AVATAR_EMOJIS, ACCENT_COLOR_OPTIONS } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +28,7 @@ export function ProfileSheet({
   initialAvatarEmoji,
   initialAccentColor,
 }: Props) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [name, setName] = useState(initialDisplayName);
   const [emoji, setEmoji] = useState(initialAvatarEmoji);
@@ -241,6 +243,18 @@ export function ProfileSheet({
             icon={<Save size={16} strokeWidth={2.4} />}
           >
             {saving ? "Saving…" : "Save"}
+          </ChunkyButton>
+          <ChunkyButton
+            type="button"
+            color="sky"
+            full
+            icon={<Settings size={16} strokeWidth={2.4} />}
+            onClick={() => {
+              onClose();
+              router.push("/administration");
+            }}
+          >
+            Administration
           </ChunkyButton>
           <form action="/auth/sign-out" method="post">
             <ChunkyButton

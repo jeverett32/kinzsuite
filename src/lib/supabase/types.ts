@@ -104,6 +104,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      wheel_quests: {
+        Row: {
+          id: string;
+          tag: string;
+          title: string;
+          detail: string;
+          accent: AccentColor;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tag: string;
+          title: string;
+          detail: string;
+          accent: AccentColor;
+          sort_order?: number;
+        };
+        Update: {
+          tag?: string;
+          title?: string;
+          detail?: string;
+          accent?: AccentColor;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       messages: {
         Row: {
           id: string;
@@ -142,3 +169,4 @@ export type DailyTask = Database["public"]["Tables"]["daily_tasks"]["Row"];
 export type DailyLog = Database["public"]["Tables"]["daily_log"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type WheelQuest = Database["public"]["Tables"]["wheel_quests"]["Row"];
