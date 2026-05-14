@@ -11,70 +11,57 @@ const WOOD_DARK = "#6B3F12";
 const WOOD = "#A66A2C";
 const WOOD_LIGHT = "#C98C4D";
 
-function RopeTie() {
+function RopeRing() {
+  const W = 44;
+  const H = 44;
+  const cx = W / 2;
+  const cy = H / 2;
+  const r = 17;
+  const ticks = 18;
   return (
-    <svg viewBox="0 0 96 80" width={96} height={80}>
-      <ellipse
-        cx={88}
-        cy={20}
-        rx={7}
-        ry={12}
-        fill={GOLD_DEEP}
-        stroke={PALETTE.ink}
-        strokeWidth={1.5}
-      />
-      <path
-        d="M 84 12 Q 90 16 88 22 M 84 18 Q 90 22 88 28 M 84 24 Q 90 28 88 34"
-        stroke={GOLD_PALE}
-        strokeWidth={1}
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r}
         fill="none"
-        opacity={0.7}
-      />
-
-      <path
-        d="M 2 12 Q 4 10 8 12 L 86 14 Q 92 16 92 22 L 90 28 Q 86 32 82 30 L 6 28 Q 2 26 2 22 Z"
-        fill={GOLD}
         stroke={PALETTE.ink}
-        strokeWidth={1.5}
+        strokeWidth={8}
       />
-      {Array.from({ length: 14 }).map((_, i) => {
-        const x = 6 + i * 6;
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={GOLD} strokeWidth={6} />
+      <circle
+        cx={cx}
+        cy={cy - 0.5}
+        r={r}
+        fill="none"
+        stroke={GOLD_PALE}
+        strokeWidth={1.4}
+        opacity={0.85}
+        strokeDasharray="2.5 3"
+      />
+      {Array.from({ length: ticks }).map((_, i) => {
+        const a = (i / ticks) * Math.PI * 2 - Math.PI / 2;
+        const ox = Math.cos(a);
+        const oy = Math.sin(a);
+        const tx = -oy;
+        const ty = ox;
+        const x1 = cx + ox * (r - 3) - tx * 2.4;
+        const y1 = cy + oy * (r - 3) - ty * 2.4;
+        const x2 = cx + ox * (r + 3) + tx * 0.8;
+        const y2 = cy + oy * (r + 3) + ty * 0.8;
         return (
-          <path
+          <line
             key={i}
-            d={`M ${x} 13 Q ${x + 3} 20 ${x} 28`}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
             stroke={GOLD_DEEP}
-            strokeWidth={1.1}
-            fill="none"
+            strokeWidth={1.4}
+            strokeLinecap="round"
           />
         );
       })}
-      <path
-        d="M 4 16 Q 44 14 86 18"
-        stroke={GOLD_PALE}
-        strokeWidth={1}
-        fill="none"
-        opacity={0.8}
-      />
-
-      <path
-        d="M 44 28 Q 42 34 46 38 L 50 38 Q 54 34 52 28 Z"
-        fill={GOLD}
-        stroke={PALETTE.ink}
-        strokeWidth={1.2}
-      />
-      <path
-        d="M 40 38 L 38 64 M 44 38 L 43 70 M 48 38 L 49 70 M 52 38 L 54 64 M 56 38 L 58 60"
-        stroke={GOLD_DEEP}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 36 64 Q 48 72 60 64 L 58 70 Q 48 76 38 70 Z"
-        fill={GOLD}
-        stroke={PALETTE.ink}
-        strokeWidth={1.2}
-      />
     </svg>
   );
 }
@@ -199,11 +186,17 @@ export function StageBackground() {
         />
       </svg>
 
-      <div className="absolute" style={{ top: "46%", left: "-2%" }}>
-        <RopeTie />
+      <div
+        className="absolute"
+        style={{ top: "50%", left: "4%", transform: "translate(-50%, -50%)" }}
+      >
+        <RopeRing />
       </div>
-      <div className="absolute" style={{ top: "46%", right: "-2%", transform: "scaleX(-1)" }}>
-        <RopeTie />
+      <div
+        className="absolute"
+        style={{ top: "50%", right: "4%", transform: "translate(50%, -50%)" }}
+      >
+        <RopeRing />
       </div>
 
       <div
