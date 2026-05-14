@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+  background: linear-gradient(180deg, #62cdf1 0%, #9fdff5 55%, #bceaf6 100%);
+  color: #13294b;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbar but keep scroll behavior */
+.kz-hscroll::-webkit-scrollbar {
+  display: none;
+}
+.kz-hscroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Sticker card — thick outline + drop shadow + bottom highlight */
+.kz-sticker {
+  border: 2.5px solid #13294b;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.6) inset,
+    0 6px 0 -1px #13294b,
+    0 14px 24px -8px rgba(19, 41, 75, 0.4);
+  background: #fff;
+}
+
+/* Chunky 3D pill button */
+.kz-chunky {
+  position: relative;
+  border: 2.5px solid #13294b;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: transform 0.08s, box-shadow 0.08s;
+  box-shadow:
+    0 4px 0 0 #13294b,
+    inset 0 -8px 0 -2px rgba(0, 0, 0, 0.15),
+    inset 0 6px 0 -2px rgba(255, 255, 255, 0.45);
+  color: #13294b;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.kz-chunky:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 0 #13294b,
+    inset 0 -4px 0 -2px rgba(0, 0, 0, 0.15),
+    inset 0 4px 0 -2px rgba(255, 255, 255, 0.45);
+}
+.kz-chunky:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Polaroid hover jiggle */
+.kz-jiggle:hover {
+  transform: translateY(-6px) rotate(-1.5deg) !important;
+}
+.kz-jiggle:active {
+  transform: translateY(-2px) scale(0.98) !important;
+}
+.kz-jiggle-active:hover {
+  transform: translateY(-8px) rotate(-2deg) !important;
+}
+
+@keyframes kz-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(40px);
+  }
+}
+.kz-drift {
+  animation: kz-drift 14s ease-in-out infinite alternate;
+}
