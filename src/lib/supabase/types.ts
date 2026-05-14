@@ -6,16 +6,19 @@ export type Database = {
           id: string;
           display_name: string | null;
           avatar_url: string | null;
+          total_points: number;
           created_at: string;
         };
         Insert: {
           id: string;
           display_name?: string | null;
           avatar_url?: string | null;
+          total_points?: number;
         };
         Update: {
           display_name?: string | null;
           avatar_url?: string | null;
+          total_points?: number;
         };
         Relationships: [];
       };
@@ -51,30 +54,45 @@ export type Database = {
       daily_tasks: {
         Row: {
           id: string;
+          user_id: string;
           task_name: string;
-          reward: string | null;
-          assigned_to: "me" | "partner" | "both";
-          completed_by: string | null;
+          points: number;
           completed_at: string | null;
           sort_order: number;
           created_at: string;
         };
         Insert: {
           id?: string;
+          user_id: string;
           task_name: string;
-          reward?: string | null;
-          assigned_to?: "me" | "partner" | "both";
-          completed_by?: string | null;
+          points?: number;
           completed_at?: string | null;
           sort_order?: number;
         };
         Update: {
           task_name?: string;
-          reward?: string | null;
-          assigned_to?: "me" | "partner" | "both";
-          completed_by?: string | null;
+          points?: number;
           completed_at?: string | null;
           sort_order?: number;
+        };
+        Relationships: [];
+      };
+      daily_log: {
+        Row: {
+          user_id: string;
+          log_date: string;
+          tasks_completed: number;
+          points_earned: number;
+        };
+        Insert: {
+          user_id: string;
+          log_date: string;
+          tasks_completed?: number;
+          points_earned?: number;
+        };
+        Update: {
+          tasks_completed?: number;
+          points_earned?: number;
         };
         Relationships: [];
       };
@@ -108,5 +126,6 @@ export type Database = {
 
 export type Pet = Database["public"]["Tables"]["pets"]["Row"];
 export type DailyTask = Database["public"]["Tables"]["daily_tasks"]["Row"];
+export type DailyLog = Database["public"]["Tables"]["daily_log"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
