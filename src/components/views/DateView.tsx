@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
@@ -37,9 +37,11 @@ function toQuestList(rows: WheelQuest[]): Quest[] {
 function Wheel({
   quests,
   onLand,
+  alignSliceIndex,
 }: {
   quests: Quest[];
   onLand: (i: number) => void;
+  alignSliceIndex: number | null;
 }) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -67,6 +69,22 @@ function Wheel({
       onLand(target);
     }, 4300);
   }
+
+  const lastAlignedSlice = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (N < 1 || slice <= 0) return;
+    if (alignSliceIndex == null) {
+      lastAlignedSlice.current = null;
+      return;
+    }
+    if (alignSliceIndex < 0 || alignSliceIndex >= N) return;
+    if (lastAlignedSlice.current === alignSliceIndex) return;
+    lastAlignedSlice.current = alignSliceIndex;
+    const targetCenter = alignSliceIndex * slice + slice / 2;
+    const desired = (360 - targetCenter) % 360;
+    setRotation(desired);
+  }, [alignSliceIndex, N, slice]);
 
   if (N < 1) {
     return (
@@ -211,15 +229,37 @@ function Wheel({
 
 type Props = {
   initialWheelQuests: WheelQuest[];
+  initialAcceptedQuestId: string | null;
 };
 
-export function DateView({ initialWheelQuests }: Props) {
+export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [quests, setQuests] = useState<Quest[]>(() => toQuestList(initialWheelQuests));
+  const questsRef = useRef(quests);
+  useEffect(() => {
+    questsRef.current = quests;
+  }, [quests]);
+
+  const [acceptedQuestId, setAcceptedQuestId] = useState<string | null>(initialAcceptedQuestId);
+
+  useEffect(() => {
+    setAcceptedQuestId(initialAcceptedQuestId);
+  }, [initialAcceptedQuestId]);
 
   useEffect(() => {
     setQuests(toQuestList(initialWheelQuests));
   }, [initialWheelQuests]);
+
+  const [questIdx, setQuestIdx] = useState(0);
+
+  useEffect(() => {
+    void (async () => {
+      const { data } = await supabase.from("date_wheel_pick").select("accepted_quest_id").eq("id", 1).maybeSingle();
+      if (data && "accepted_quest_id" in data) {
+        setAcceptedQuestId(data.accepted_quest_id ?? null);
+      }
+    })();
+  }, [supabase]);
 
   useEffect(() => {
     async function reload() {
@@ -243,13 +283,82 @@ export function DateView({ initialWheelQuests }: Props) {
     };
   }, [supabase]);
 
-  const [questIdx, setQuestIdx] = useState(0);
+  useEffect(() => {
+    const channel = supabase
+      .channel("date_wheel_pick")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "date_wheel_pick", filter: "id=eq.1" },
+        (payload) => {
+          const row = payload.new as { accepted_quest_id?: string | null } | undefined;
+          if (row && "accepted_quest_id" in row) {
+            const next = row.accepted_quest_id ?? null;
+            setAcceptedQuestId(next);
+            if (next) {
+              const i = questsRef.current.findIndex((q) => q.id === next);
+              if (i >= 0) setQuestIdx(i);
+            }
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase]);
 
   useEffect(() => {
     setQuestIdx((i) => Math.min(i, Math.max(0, quests.length - 1)));
   }, [quests.length]);
 
-  const current = quests[questIdx] ?? quests[0];
+  useEffect(() => {
+    if (!acceptedQuestId) return;
+    const i = questsRef.current.findIndex((q) => q.id === acceptedQuestId);
+    if (i >= 0) setQuestIdx(i);
+  }, [acceptedQuestId]);
+
+  const [accepting, setAccepting] = useState(false);
+  const [acceptErr, setAcceptErr] = useState<string | null>(null);
+
+  const alignSliceIndex = useMemo(() => {
+    if (!acceptedQuestId) return null;
+    const i = quests.findIndex((q) => q.id === acceptedQuestId);
+    return i >= 0 ? i : null;
+  }, [acceptedQuestId, quests]);
+
+  const displayQuest = useMemo(() => {
+    if (acceptedQuestId) {
+      const q = quests.find((x) => x.id === acceptedQuestId);
+      if (q) return q;
+    }
+    return quests[questIdx] ?? quests[0];
+  }, [acceptedQuestId, quests, questIdx]);
+
+  const pendingQuest = quests[questIdx] ?? quests[0];
+  const canPersist =
+    Boolean(pendingQuest?.id) && pendingQuest.id !== undefined && !pendingQuest.id.startsWith("fallback-");
+
+  async function acceptQuest() {
+    if (!canPersist || !pendingQuest.id) return;
+    setAccepting(true);
+    setAcceptErr(null);
+    const { error } = await supabase
+      .from("date_wheel_pick")
+      .update({
+        accepted_quest_id: pendingQuest.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+    setAccepting(false);
+    if (error) {
+      setAcceptErr(error.message);
+      return;
+    }
+    setAcceptedQuestId(pendingQuest.id);
+  }
+
+  const current = displayQuest;
 
   if (!current) {
     return (
@@ -279,7 +388,7 @@ export function DateView({ initialWheelQuests }: Props) {
       </div>
 
       <div className="relative pb-3.5 pt-1.5">
-        <Wheel quests={quests} onLand={setQuestIdx} />
+        <Wheel quests={quests} onLand={setQuestIdx} alignSliceIndex={alignSliceIndex} />
       </div>
 
       <div
@@ -291,10 +400,15 @@ export function DateView({ initialWheelQuests }: Props) {
             className="font-hand text-lg"
             style={{ color: PALETTE[current.accent] }}
           >
-            Your quest
+            {acceptedQuestId ? "Tonight's quest" : "Your quest"}
           </div>
           <Chip tone={current.accent}>★ {current.tag}</Chip>
         </div>
+        {acceptedQuestId && (
+          <p className="mb-1.5 font-hand text-xs leading-snug" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+            Locked in for both of you — updates live when someone accepts a new slice.
+          </p>
+        )}
         <div className="font-display text-[22px] leading-tight" style={{ color: PALETTE.ink }}>
           {current.title}
         </div>
@@ -304,9 +418,30 @@ export function DateView({ initialWheelQuests }: Props) {
         >
           {current.detail}
         </div>
+        {acceptedQuestId && pendingQuest?.id && pendingQuest.id !== acceptedQuestId && (
+          <p className="mt-2 font-hand text-xs leading-snug" style={{ color: PALETTE.ink, opacity: 0.72 }}>
+            The wheel is on a different slice — tap below to make that one tonight&apos;s quest for both of you.
+          </p>
+        )}
+        {!canPersist && (
+          <p className="mt-2 font-hand text-xs text-red-600">
+            Wheel data isn&apos;t loaded from the database yet — accept is unavailable until migrations run.
+          </p>
+        )}
+        {acceptErr && <p className="mt-2 font-hand text-xs text-red-600">{acceptErr}</p>}
         <div className="mt-3.5">
-          <ChunkyButton color="grass" full icon={<Check size={16} strokeWidth={2.4} />}>
-            ACCEPT QUEST
+          <ChunkyButton
+            color="grass"
+            full
+            icon={<Check size={16} strokeWidth={2.4} />}
+            disabled={accepting || !canPersist}
+            onClick={() => void acceptQuest()}
+          >
+            {accepting
+              ? "Saving…"
+              : acceptedQuestId && pendingQuest?.id !== acceptedQuestId
+                ? "UPDATE QUEST FOR BOTH"
+                : "ACCEPT QUEST"}
           </ChunkyButton>
         </div>
       </div>

@@ -131,6 +131,23 @@ export type Database = {
         };
         Relationships: [];
       };
+      date_wheel_pick: {
+        Row: {
+          id: number;
+          accepted_quest_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id: number;
+          accepted_quest_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          accepted_quest_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       messages: {
         Row: {
           id: string;
@@ -170,3 +187,4 @@ export type DailyLog = Database["public"]["Tables"]["daily_log"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type WheelQuest = Database["public"]["Tables"]["wheel_quests"]["Row"];
+export type DateWheelPick = Database["public"]["Tables"]["date_wheel_pick"]["Row"];
