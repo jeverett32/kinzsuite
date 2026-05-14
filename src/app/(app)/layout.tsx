@@ -22,17 +22,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .maybeSingle();
 
   return (
-    <div className="relative mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden">
-      <SkyBackground showGrass />
-      <Header
-        userId={user.id}
-        userEmail={user.email ?? null}
-        displayName={profile?.display_name ?? ""}
-      />
-      <main className="kz-hscroll relative z-10 min-h-0 flex-1 overflow-y-auto pb-4">
-        {children}
-      </main>
-      <BottomNav />
-    </div>
+    <>
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <SkyBackground showGrass />
+      </div>
+      <div className="relative z-10 mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden">
+        <Header
+          userId={user.id}
+          userEmail={user.email ?? null}
+          displayName={profile?.display_name ?? ""}
+        />
+        <main className="kz-hscroll relative z-10 min-h-0 flex-1 overflow-y-auto pb-4">
+          {children}
+        </main>
+        <BottomNav />
+      </div>
+    </>
   );
 }

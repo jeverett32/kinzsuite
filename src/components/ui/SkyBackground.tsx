@@ -25,7 +25,7 @@ function Cloud({ x, y, scale = 1, delay = 0 }: { x: string; y: string; scale?: n
 
 export function SkyBackground({ showGrass = false }: { showGrass?: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+    <div className="pointer-events-none absolute inset-0">
       <div
         className="absolute inset-0"
         style={{
@@ -43,26 +43,28 @@ export function SkyBackground({ showGrass = false }: { showGrass?: boolean }) {
           background: `radial-gradient(circle, ${PALETTE.sun}aa 0%, transparent 65%)`,
         }}
       />
-      <Cloud x="6%" y="14%" scale={1} delay={0} />
-      <Cloud x="62%" y="7%" scale={0.7} delay={-6} />
-      <Cloud x="78%" y="22%" scale={0.5} delay={-12} />
-      <Cloud x="-4%" y="34%" scale={0.85} delay={-3} />
-      <Cloud x="48%" y="40%" scale={0.6} delay={-9} />
-      {showGrass && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: -30,
-            left: -40,
-            right: -40,
-            height: 130,
-            background: `linear-gradient(180deg, ${PALETTE.grass} 0%, ${shade(PALETTE.grass, -25)} 100%)`,
-            borderRadius: "50% 50% 0 0 / 60% 60% 0 0",
-            borderTop: `3px solid ${PALETTE.ink}`,
-            opacity: 0.6,
-          }}
-        />
-      )}
+      <div className="absolute inset-0 overflow-hidden">
+        <Cloud x="6%" y="14%" scale={1} delay={0} />
+        <Cloud x="62%" y="7%" scale={0.7} delay={-6} />
+        <Cloud x="78%" y="22%" scale={0.5} delay={-12} />
+        <Cloud x="-4%" y="34%" scale={0.85} delay={-3} />
+        <Cloud x="48%" y="40%" scale={0.6} delay={-9} />
+        {showGrass && (
+          <div
+            style={{
+              position: "absolute",
+              bottom: -30,
+              left: -40,
+              right: -40,
+              height: 130,
+              background: `linear-gradient(180deg, ${PALETTE.grass} 0%, ${shade(PALETTE.grass, -25)} 100%)`,
+              borderRadius: "50% 50% 0 0 / 60% 60% 0 0",
+              borderTop: `3px solid ${PALETTE.ink}`,
+              opacity: 0.6,
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
