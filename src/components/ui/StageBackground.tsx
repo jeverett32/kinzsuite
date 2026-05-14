@@ -11,57 +11,69 @@ const WOOD_DARK = "#6B3F12";
 const WOOD = "#A66A2C";
 const WOOD_LIGHT = "#C98C4D";
 
+function roundedRectPath(x: number, y: number, w: number, h: number, r: number) {
+  return [
+    `M ${x + r} ${y}`,
+    `H ${x + w - r}`,
+    `Q ${x + w} ${y} ${x + w} ${y + r}`,
+    `V ${y + h - r}`,
+    `Q ${x + w} ${y + h} ${x + w - r} ${y + h}`,
+    `H ${x + r}`,
+    `Q ${x} ${y + h} ${x} ${y + h - r}`,
+    `V ${y + r}`,
+    `Q ${x} ${y} ${x + r} ${y}`,
+    "Z",
+  ].join(" ");
+}
+
 function RopeRing() {
-  const W = 44;
-  const H = 44;
-  const cx = W / 2;
-  const cy = H / 2;
-  const r = 17;
-  const ticks = 18;
+  const W = 68;
+  const H = 30;
+  const inset = 6;
+  const outerPath = roundedRectPath(2, 2, W - 4, H - 4, H / 2 - 2);
+  const innerX = inset;
+  const innerY = inset;
+  const innerW = W - inset * 2;
+  const innerH = H - inset * 2;
+  const innerPath = roundedRectPath(innerX, innerY, innerW, innerH, innerH / 2);
+  const tickCount = 8;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r}
-        fill="none"
+      <path
+        d={`${outerPath} ${innerPath}`}
+        fill={GOLD}
+        fillRule="evenodd"
         stroke={PALETTE.ink}
-        strokeWidth={8}
+        strokeWidth={2.5}
       />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={GOLD} strokeWidth={6} />
-      <circle
-        cx={cx}
-        cy={cy - 0.5}
-        r={r}
-        fill="none"
-        stroke={GOLD_PALE}
-        strokeWidth={1.4}
-        opacity={0.85}
-        strokeDasharray="2.5 3"
-      />
-      {Array.from({ length: ticks }).map((_, i) => {
-        const a = (i / ticks) * Math.PI * 2 - Math.PI / 2;
-        const ox = Math.cos(a);
-        const oy = Math.sin(a);
-        const tx = -oy;
-        const ty = ox;
-        const x1 = cx + ox * (r - 3) - tx * 2.4;
-        const y1 = cy + oy * (r - 3) - ty * 2.4;
-        const x2 = cx + ox * (r + 3) + tx * 0.8;
-        const y2 = cy + oy * (r + 3) + ty * 0.8;
+      {Array.from({ length: tickCount }).map((_, i) => {
+        const x = innerX + ((i + 0.5) / tickCount) * innerW;
         return (
-          <line
+          <path
             key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
+            d={`M ${x - 2} ${innerY + 2} Q ${x + 1.5} ${innerY + innerH / 2} ${x - 2} ${innerY + innerH - 2}`}
             stroke={GOLD_DEEP}
             strokeWidth={1.4}
+            fill="none"
             strokeLinecap="round"
           />
         );
       })}
+      <path
+        d={roundedRectPath(4.5, 4.5, W - 9, H - 9, H / 2 - 4.5)}
+        stroke={GOLD_PALE}
+        strokeWidth={1.2}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.9}
+      />
+      <path
+        d={`M ${innerX + 5} ${innerY + innerH - 1} H ${innerX + innerW - 5}`}
+        stroke={GOLD_DEEP}
+        strokeWidth={1}
+        strokeLinecap="round"
+        opacity={0.7}
+      />
     </svg>
   );
 }
