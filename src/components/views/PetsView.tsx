@@ -203,15 +203,13 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 px-4 pb-6 pt-12 sm:items-center"
-      style={{ background: "rgba(19,41,75,0.4)" }}
-    >
-      <form
-        onSubmit={onSubmit}
-        className="kz-sticker relative w-full max-w-md rounded-[28px] p-5"
-        style={{ ["--ink" as any]: PALETTE.ink }}
-      >
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
+      <div className="flex min-h-[100dvh] flex-col items-center px-4 py-6">
+        <form
+          onSubmit={onSubmit}
+          className="kz-sticker relative my-auto w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-[28px] p-5"
+          style={{ ["--ink" as any]: PALETTE.ink }}
+        >
         <button
           type="button"
           onClick={onClose}
@@ -328,6 +326,7 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
           </ChunkyButton>
         </div>
       </form>
+      </div>
     </div>
   );
 }

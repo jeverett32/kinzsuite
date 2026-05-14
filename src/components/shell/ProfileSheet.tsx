@@ -70,15 +70,15 @@ export function ProfileSheet({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-6 pt-12 sm:items-center"
-      style={{ background: "rgba(19,41,75,0.4)" }}
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
       onClick={onClose}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="kz-sticker relative w-full max-w-md rounded-[28px] p-5"
-        style={{ ["--ink" as never]: PALETTE.ink }}
-      >
+      <div className="flex min-h-[100dvh] flex-col items-center px-4 py-6">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="kz-sticker relative my-auto w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-[28px] p-5"
+          style={{ ["--ink" as never]: PALETTE.ink }}
+        >
         <button
           type="button"
           onClick={onClose}
@@ -266,6 +266,7 @@ export function ProfileSheet({
               Sign out
             </ChunkyButton>
           </form>
+        </div>
         </div>
       </div>
     </div>

@@ -345,15 +345,15 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
 
       {taskDraft && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-6 pt-16 sm:items-center"
-          style={{ background: "rgba(19,41,75,0.45)" }}
+          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
           onClick={() => setTaskDraft(null)}
         >
-          <div
-            className="kz-sticker max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[24px] p-4"
-            style={{ ["--ink" as never]: PALETTE.ink }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex min-h-[100dvh] flex-col items-center px-4 py-6">
+            <div
+              className="kz-sticker my-auto w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-[24px] p-4"
+              style={{ ["--ink" as never]: PALETTE.ink }}
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="mb-3 flex items-start justify-between gap-2">
               <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
                 Edit task
@@ -438,21 +438,22 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
                 Delete
               </ChunkyButton>
             </div>
+            </div>
           </div>
         </div>
       )}
 
       {questDraft && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-6 pt-16 sm:items-center"
-          style={{ background: "rgba(19,41,75,0.45)" }}
+          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
           onClick={() => setQuestDraft(null)}
         >
-          <div
-            className="kz-sticker max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[24px] p-4"
-            style={{ ["--ink" as never]: PALETTE.ink }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="flex min-h-[100dvh] flex-col items-center px-4 py-6">
+            <div
+              className="kz-sticker my-auto w-full max-w-md max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-[24px] p-4"
+              style={{ ["--ink" as never]: PALETTE.ink }}
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="mb-3 flex items-start justify-between gap-2">
               <div>
                 <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
@@ -552,6 +553,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
               <ChunkyButton type="button" color="blush" full onClick={() => void saveQuestFromDraft(questDraft)}>
                 Save
               </ChunkyButton>
+            </div>
             </div>
           </div>
         </div>
