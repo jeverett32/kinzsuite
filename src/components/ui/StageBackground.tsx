@@ -1,70 +1,14 @@
 import { PALETTE } from "@/lib/utils";
 
-const GOLD_DEEP = "#B8851F";
-const GOLD = "#E6B23A";
-const GOLD_LIGHT = "#F5D55E";
-const RED_DEEP = "#6B0F14";
-const RED = "#A8181F";
-const RED_LIGHT = "#D93838";
-const WOOD_DARK = "#5B3A1E";
-const WOOD = "#8B5A2B";
-const WOOD_LIGHT = "#B07E3F";
-
-function RopeTieback({ side }: { side: "left" | "right" }) {
-  const flip = side === "right" ? -1 : 1;
-  return (
-    <svg
-      viewBox="0 0 80 120"
-      width={64}
-      height={96}
-      style={{
-        position: "absolute",
-        top: "26%",
-        [side]: "4%",
-        transform: `scaleX(${flip})`,
-        zIndex: 5,
-        filter: `drop-shadow(0 3px 0 ${PALETTE.ink}33)`,
-      }}
-    >
-      <defs>
-        <linearGradient id={`rope-${side}`} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor={GOLD_DEEP} />
-          <stop offset="50%" stopColor={GOLD_LIGHT} />
-          <stop offset="100%" stopColor={GOLD_DEEP} />
-        </linearGradient>
-      </defs>
-      <path
-        d="M 8 20 C 20 30, 60 30, 72 20 C 76 40, 56 52, 40 52 C 24 52, 4 40, 8 20 Z"
-        fill={`url(#rope-${side})`}
-        stroke={PALETTE.ink}
-        strokeWidth={2}
-      />
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <path
-          key={i}
-          d={`M ${10 + i * 11} 22 Q ${14 + i * 11} 36, ${10 + i * 11} 50`}
-          stroke={PALETTE.ink}
-          strokeWidth={1}
-          fill="none"
-          opacity={0.45}
-        />
-      ))}
-      <circle cx={40} cy={56} r={6} fill={GOLD} stroke={PALETTE.ink} strokeWidth={2} />
-      <path
-        d="M 34 60 L 32 96 M 38 60 L 36 100 M 42 60 L 44 100 M 46 60 L 48 96"
-        stroke={GOLD_DEEP}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-      />
-      <path
-        d="M 30 96 Q 40 108, 50 96"
-        fill={GOLD}
-        stroke={PALETTE.ink}
-        strokeWidth={2}
-      />
-    </svg>
-  );
-}
+const GOLD_DEEP = "#C97A0C";
+const GOLD = "#F2A627";
+const GOLD_LIGHT = "#FFCE4D";
+const RED_DEEP = "#8E1414";
+const RED = "#D62525";
+const RED_LIGHT = "#F25555";
+const WOOD_DARK = "#6B3F12";
+const WOOD = "#A66A2C";
+const WOOD_LIGHT = "#C98C4D";
 
 export function StageBackground() {
   return (
@@ -74,17 +18,10 @@ export function StageBackground() {
         style={{
           background: `repeating-linear-gradient(90deg,
             ${GOLD_DEEP} 0px,
-            ${GOLD} 8px,
-            ${GOLD_LIGHT} 18px,
-            ${GOLD} 28px,
-            ${GOLD_DEEP} 36px)`,
-        }}
-      />
-      <div
-        className="absolute inset-x-0 top-0"
-        style={{
-          height: 40,
-          background: `linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 100%)`,
+            ${GOLD} 12px,
+            ${GOLD_LIGHT} 22px,
+            ${GOLD} 32px,
+            ${GOLD_DEEP} 44px)`,
         }}
       />
 
@@ -92,79 +29,91 @@ export function StageBackground() {
         viewBox="0 0 100 100"
         preserveAspectRatio="none"
         className="absolute inset-0 h-full w-full"
-        style={{ zIndex: 4 }}
       >
         <defs>
-          <linearGradient id="red-curtain-left" x1="0" x2="1" y1="0" y2="0">
+          <linearGradient id="curtain-left" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor={RED_DEEP} />
             <stop offset="20%" stopColor={RED} />
-            <stop offset="40%" stopColor={RED_LIGHT} />
-            <stop offset="60%" stopColor={RED} />
-            <stop offset="80%" stopColor={RED_DEEP} />
-            <stop offset="100%" stopColor={RED} />
+            <stop offset="45%" stopColor={RED_LIGHT} />
+            <stop offset="70%" stopColor={RED} />
+            <stop offset="100%" stopColor={RED_DEEP} />
           </linearGradient>
-          <linearGradient id="red-curtain-right" x1="0" x2="1" y1="0" y2="0">
-            <stop offset="0%" stopColor={RED} />
-            <stop offset="20%" stopColor={RED_DEEP} />
-            <stop offset="40%" stopColor={RED} />
-            <stop offset="60%" stopColor={RED_LIGHT} />
-            <stop offset="80%" stopColor={RED} />
+          <linearGradient id="curtain-right" x1="1" x2="0" y1="0" y2="0">
+            <stop offset="0%" stopColor={RED_DEEP} />
+            <stop offset="20%" stopColor={RED} />
+            <stop offset="45%" stopColor={RED_LIGHT} />
+            <stop offset="70%" stopColor={RED} />
+            <stop offset="100%" stopColor={RED_DEEP} />
+          </linearGradient>
+          <linearGradient id="valance" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor={RED_LIGHT} />
+            <stop offset="60%" stopColor={RED} />
             <stop offset="100%" stopColor={RED_DEEP} />
           </linearGradient>
         </defs>
-        <path
-          d="M 0 0 L 30 0 L 28 8 Q 24 20, 22 32 Q 26 44, 18 56 Q 22 64, 14 72 Q 18 78, 10 82 L 0 78 Z"
-          fill="url(#red-curtain-left)"
-          stroke={PALETTE.ink}
-          strokeWidth={0.4}
-        />
-        <path
-          d="M 100 0 L 70 0 L 72 8 Q 76 20, 78 32 Q 74 44, 82 56 Q 78 64, 86 72 Q 82 78, 90 82 L 100 78 Z"
-          fill="url(#red-curtain-right)"
-          stroke={PALETTE.ink}
-          strokeWidth={0.4}
-        />
-        <path
-          d="M 0 0 L 100 0 L 100 6 Q 80 12, 50 10 Q 20 12, 0 6 Z"
-          fill={RED_DEEP}
-          stroke={PALETTE.ink}
-          strokeWidth={0.4}
-        />
-        <path
-          d="M 0 5 Q 25 11, 50 9 Q 75 11, 100 5"
-          stroke={GOLD_LIGHT}
-          strokeWidth={0.6}
-          fill="none"
-        />
-      </svg>
 
-      <RopeTieback side="left" />
-      <RopeTieback side="right" />
+        <path
+          d="M 0 0 L 100 0 L 100 14 Q 92 22, 84 14 Q 76 24, 68 14 Q 60 24, 52 14 Q 44 24, 36 14 Q 28 24, 20 14 Q 12 22, 4 14 L 0 14 Z"
+          fill="url(#valance)"
+          stroke={PALETTE.ink}
+          strokeWidth={0.3}
+        />
+
+        <path
+          d="M 0 0 L 28 0 Q 26 18, 24 38 Q 28 56, 22 72 Q 26 84, 18 95 L 0 95 Z"
+          fill="url(#curtain-left)"
+          stroke={PALETTE.ink}
+          strokeWidth={0.3}
+        />
+        <path
+          d="M 100 0 L 72 0 Q 74 18, 76 38 Q 72 56, 78 72 Q 74 84, 82 95 L 100 95 Z"
+          fill="url(#curtain-right)"
+          stroke={PALETTE.ink}
+          strokeWidth={0.3}
+        />
+
+        <path d="M 4 6 Q 6 26, 4 50 Q 7 70, 3 90" stroke={RED_DEEP} strokeWidth={0.4} fill="none" opacity={0.7} />
+        <path d="M 10 6 Q 12 26, 10 50 Q 13 70, 9 90" stroke={RED_LIGHT} strokeWidth={0.3} fill="none" opacity={0.6} />
+        <path d="M 18 6 Q 20 26, 18 50 Q 21 70, 17 90" stroke={RED_DEEP} strokeWidth={0.4} fill="none" opacity={0.5} />
+        <path d="M 96 6 Q 94 26, 96 50 Q 93 70, 97 90" stroke={RED_DEEP} strokeWidth={0.4} fill="none" opacity={0.7} />
+        <path d="M 90 6 Q 88 26, 90 50 Q 87 70, 91 90" stroke={RED_LIGHT} strokeWidth={0.3} fill="none" opacity={0.6} />
+        <path d="M 82 6 Q 80 26, 82 50 Q 79 70, 83 90" stroke={RED_DEEP} strokeWidth={0.4} fill="none" opacity={0.5} />
+      </svg>
 
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: "22%",
-          background: `repeating-linear-gradient(180deg,
-            ${WOOD} 0px,
-            ${WOOD_LIGHT} 22px,
-            ${WOOD} 44px,
-            ${WOOD_DARK} 46px,
-            ${WOOD} 48px)`,
+          height: "24%",
+          background: `linear-gradient(180deg, ${WOOD_DARK} 0%, ${WOOD} 35%, ${WOOD_LIGHT} 100%)`,
           borderTop: `3px solid ${PALETTE.ink}`,
-          boxShadow: `inset 0 12px 18px rgba(0,0,0,0.35)`,
-          zIndex: 3,
+          boxShadow: `inset 0 8px 16px rgba(0,0,0,0.3)`,
         }}
-      />
-      <div
-        className="absolute inset-x-0"
-        style={{
-          bottom: "22%",
-          height: 8,
-          background: `linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 100%)`,
-          zIndex: 3,
-        }}
-      />
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `repeating-linear-gradient(180deg,
+              transparent 0px,
+              transparent 26px,
+              ${WOOD_DARK} 26px,
+              ${WOOD_DARK} 28px)`,
+            opacity: 0.55,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: `repeating-linear-gradient(90deg,
+              transparent 0px,
+              transparent 84px,
+              ${WOOD_DARK} 84px,
+              ${WOOD_DARK} 86px,
+              transparent 86px,
+              transparent 168px)`,
+            opacity: 0.35,
+          }}
+        />
+      </div>
     </div>
   );
 }
