@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { createClient } from "@/lib/supabase/client";
 import type { AccentColor, DailyTask, WheelQuest } from "@/lib/supabase/types";
-import { PALETTE } from "@/lib/utils";
+import { PALETTE, shade } from "@/lib/utils";
 
 const ACCENTS: AccentColor[] = ["sky", "blush", "sun", "grass", "purple"];
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatErr(e: unknown): string {
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message: string }).message === "string") {
+    return (e as { message: string }).message;
+  }
+  if (e instanceof Error) return e.message;
+  return "Something went wrong";
 }
 
 type Props = {
@@ -20,10 +28,13 @@ type Props = {
   initialQuests: WheelQuest[];
 };
 
+type Tab = "tasks" | "quests";
+
 export function AdministrationView({ userId, initialTasks, initialQuests }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const today = todayIso();
 
+  const [tab, setTab] = useState<Tab>("tasks");
   const [tasks, setTasks] = useState<DailyTask[]>(() =>
     initialTasks
       .filter((t) => t.user_id === userId)
@@ -33,56 +44,59 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
     [...initialQuests].sort((a, b) => a.sort_order - b.sort_order),
   );
   const [err, setErr] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
 
-  useEffect(() => {
-    setTasks(
-      initialTasks
-        .filter((t) => t.user_id === userId)
-        .sort((a, b) => a.sort_order - b.sort_order),
-    );
-  }, [initialTasks, userId]);
+  /** Edit sheet: draft copies so list state stays stable until Save. */
+  const [taskDraft, setTaskDraft] = useState<DailyTask | null>(null);
+  const [questDraft, setQuestDraft] = useState<WheelQuest | null>(null);
 
-  useEffect(() => {
-    setQuests([...initialQuests].sort((a, b) => a.sort_order - b.sort_order));
-  }, [initialQuests]);
-
-  function setError(e: unknown) {
-    const msg = e instanceof Error ? e.message : "Something went wrong";
-    setErr(msg);
-    window.setTimeout(() => setErr(null), 5000);
+  function flashErr(e: unknown) {
+    setErr(formatErr(e));
+    window.setTimeout(() => setErr(null), 6000);
   }
 
-  async function saveTask(t: DailyTask) {
+  async function saveTaskFromDraft(d: DailyTask) {
     setErr(null);
-    const lockedPoints = t.completed_at === today;
+    const lockedPoints = d.completed_at === today;
     const { error } = await supabase
       .from("daily_tasks")
       .update({
-        task_name: t.task_name,
-        sort_order: t.sort_order,
-        ...(lockedPoints ? {} : { points: t.points }),
+        task_name: d.task_name,
+        sort_order: d.sort_order,
+        ...(lockedPoints ? {} : { points: d.points }),
       })
-      .eq("id", t.id)
+      .eq("id", d.id)
       .eq("user_id", userId);
-    if (error) setError(error);
+    if (error) {
+      flashErr(error);
+      return;
+    }
+    setTasks((cur) =>
+      cur
+        .map((t) => (t.id === d.id ? { ...d } : t))
+        .sort((a, b) => a.sort_order - b.sort_order),
+    );
+    setTaskDraft(null);
   }
 
-  async function deleteTask(t: DailyTask) {
+  async function deleteTaskRow(t: DailyTask) {
     if (t.completed_at === today) {
-      setErr("Uncheck this task for today before deleting it.");
+      flashErr(new Error("Uncheck this task for today on the Today tab before deleting it."));
       return;
     }
     setErr(null);
     const { error } = await supabase.from("daily_tasks").delete().eq("id", t.id).eq("user_id", userId);
     if (error) {
-      setError(error);
+      flashErr(error);
       return;
     }
     setTasks((cur) => cur.filter((x) => x.id !== t.id));
+    setTaskDraft((d) => (d?.id === t.id ? null : d));
   }
 
   async function addTask() {
     setErr(null);
+    setAdding(true);
     const maxSort = tasks.reduce((m, t) => Math.max(m, t.sort_order), -1);
     const { data, error } = await supabase
       .from("daily_tasks")
@@ -94,48 +108,59 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       })
       .select("*")
       .single();
+    setAdding(false);
     if (error) {
-      setError(error);
+      flashErr(error);
       return;
     }
-    if (data) setTasks((cur) => [...cur, data].sort((a, b) => a.sort_order - b.sort_order));
+    if (data) {
+      setTasks((cur) => [...cur, data].sort((a, b) => a.sort_order - b.sort_order));
+      setTaskDraft({ ...data });
+    }
   }
 
-  function patchTask(id: string, patch: Partial<DailyTask>) {
-    setTasks((cur) => cur.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-  }
-
-  async function saveQuest(q: WheelQuest) {
+  async function saveQuestFromDraft(d: WheelQuest) {
     setErr(null);
     const { error } = await supabase
       .from("wheel_quests")
       .update({
-        tag: q.tag,
-        title: q.title,
-        detail: q.detail,
-        accent: q.accent,
-        sort_order: q.sort_order,
+        tag: d.tag,
+        title: d.title,
+        detail: d.detail,
+        accent: d.accent,
+        sort_order: d.sort_order,
       })
-      .eq("id", q.id);
-    if (error) setError(error);
+      .eq("id", d.id);
+    if (error) {
+      flashErr(error);
+      return;
+    }
+    setQuests((cur) =>
+      cur
+        .map((q) => (q.id === d.id ? { ...d } : q))
+        .sort((a, b) => a.sort_order - b.sort_order),
+    );
+    setQuestDraft(null);
   }
 
-  async function deleteQuest(q: WheelQuest) {
+  async function deleteQuestRow(q: WheelQuest) {
     if (quests.length <= 1) {
-      setErr("Keep at least one wheel quest.");
+      flashErr(new Error("Keep at least one wheel quest."));
       return;
     }
     setErr(null);
     const { error } = await supabase.from("wheel_quests").delete().eq("id", q.id);
     if (error) {
-      setError(error);
+      flashErr(error);
       return;
     }
     setQuests((cur) => cur.filter((x) => x.id !== q.id));
+    setQuestDraft((d) => (d?.id === q.id ? null : d));
   }
 
   async function addQuest() {
     setErr(null);
+    setAdding(true);
     const maxSort = quests.reduce((m, q) => Math.max(m, q.sort_order), -1);
     const { data, error } = await supabase
       .from("wheel_quests")
@@ -148,15 +173,15 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       })
       .select("*")
       .single();
+    setAdding(false);
     if (error) {
-      setError(error);
+      flashErr(error);
       return;
     }
-    if (data) setQuests((cur) => [...cur, data].sort((a, b) => a.sort_order - b.sort_order));
-  }
-
-  function patchQuest(id: string, patch: Partial<WheelQuest>) {
-    setQuests((cur) => cur.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+    if (data) {
+      setQuests((cur) => [...cur, data].sort((a, b) => a.sort_order - b.sort_order));
+      setQuestDraft({ ...data });
+    }
   }
 
   return (
@@ -184,7 +209,9 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
         ADMINISTRATION
       </div>
       <p className="font-hand mt-1 text-base text-white" style={{ textShadow: `0 2px 0 ${PALETTE.ink}` }}>
-        Your daily tasks (your list only) · Wheel quests shared by both of you
+        {tab === "tasks"
+          ? "Your daily checklist — only you can edit yours."
+          : "Date wheel quests — shared by both of you."}
       </p>
 
       {err && (
@@ -193,189 +220,371 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
         </div>
       )}
 
-      <section className="mt-5">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg" style={{ color: PALETTE.ink }}>
-            Daily tasks
-          </h2>
-          <ChunkyButton type="button" color="grass" size="sm" icon={<Plus size={14} />} onClick={() => void addTask()}>
-            Add
-          </ChunkyButton>
-        </div>
-        <div
-          className="kz-sticker space-y-3 rounded-3xl p-3.5"
-          style={{ ["--ink" as never]: PALETTE.ink }}
-        >
-          {tasks.length === 0 && (
-            <p className="font-hand text-center text-sm" style={{ color: PALETTE.ink, opacity: 0.6 }}>
-              No tasks yet — tap Add.
-            </p>
-          )}
-          {tasks.map((t) => {
-            const locked = t.completed_at === today;
-            return (
-              <div
-                key={t.id}
-                className="rounded-2xl border-2 bg-white/90 p-3"
-                style={{ borderColor: PALETTE.ink }}
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <label className="min-w-0 flex-1">
-                    <span className="font-display text-[10px] tracking-wider opacity-60">NAME</span>
-                    <input
-                      value={t.task_name}
-                      onChange={(e) => patchTask(t.id, { task_name: e.target.value })}
-                      className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                      style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                    />
-                  </label>
-                  <label className="w-24 shrink-0">
-                    <span className="font-display text-[10px] tracking-wider opacity-60">POINTS</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={99}
-                      disabled={locked}
-                      value={t.points}
-                      onChange={(e) =>
-                        patchTask(t.id, { points: Math.max(1, Math.min(99, Number(e.target.value) || 1)) })
-                      }
-                      className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none disabled:opacity-45"
-                      style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                    />
-                  </label>
-                  <label className="w-20 shrink-0">
-                    <span className="font-display text-[10px] tracking-wider opacity-60">ORDER</span>
-                    <input
-                      type="number"
-                      value={t.sort_order}
-                      onChange={(e) =>
-                        patchTask(t.id, { sort_order: Math.max(0, Number(e.target.value) || 0) })
-                      }
-                      className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                      style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                    />
-                  </label>
-                </div>
-                {locked && (
-                  <p className="mt-1.5 font-hand text-xs" style={{ color: PALETTE.ink, opacity: 0.65 }}>
-                    Done today — points are locked until you uncheck it on Today.
-                  </p>
-                )}
-                <div className="mt-2 flex gap-2">
-                  <ChunkyButton type="button" color="blush" size="sm" onClick={() => void saveTask(t)}>
-                    Save
-                  </ChunkyButton>
-                  <ChunkyButton
-                    type="button"
-                    color="white"
-                    size="sm"
-                    icon={<Trash2 size={14} />}
-                    onClick={() => void deleteTask(t)}
-                  >
-                    Delete
-                  </ChunkyButton>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mt-6">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="font-display text-lg" style={{ color: PALETTE.ink }}>
-            Wheel quests (Date tab)
-          </h2>
-          <ChunkyButton type="button" color="sky" size="sm" icon={<Plus size={14} />} onClick={() => void addQuest()}>
-            Add
-          </ChunkyButton>
-        </div>
-        <div
-          className="kz-sticker space-y-3 rounded-3xl p-3.5"
-          style={{ ["--ink" as never]: PALETTE.ink }}
-        >
-          {quests.map((q) => (
-            <div
-              key={q.id}
-              className="rounded-2xl border-2 bg-white/90 p-3"
-              style={{ borderColor: PALETTE.ink }}
+      <div
+        className="mt-4 flex rounded-full p-1"
+        style={{
+          background: "rgba(255,255,255,0.35)",
+          border: `2.5px solid ${PALETTE.ink}`,
+          boxShadow: `0 3px 0 ${PALETTE.ink}`,
+        }}
+      >
+        {(["tasks", "quests"] as const).map((key) => {
+          const active = tab === key;
+          const label = key === "tasks" ? "Daily tasks" : "Wheel quests";
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              className="font-display relative flex-1 rounded-full py-2 text-sm transition-transform"
+              style={{
+                background: active ? `#fff` : "transparent",
+                color: PALETTE.ink,
+                boxShadow: active ? `0 2px 0 ${PALETTE.ink}` : "none",
+                transform: active ? "translateY(-1px)" : "none",
+                letterSpacing: 0.4,
+              }}
             >
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label>
-                  <span className="font-display text-[10px] tracking-wider opacity-60">TAG</span>
-                  <input
-                    value={q.tag}
-                    onChange={(e) => patchQuest(q.id, { tag: e.target.value })}
-                    className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                    style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                  />
-                </label>
-                <label>
-                  <span className="font-display text-[10px] tracking-wider opacity-60">ACCENT</span>
-                  <select
-                    value={q.accent}
-                    onChange={(e) => patchQuest(q.id, { accent: e.target.value as AccentColor })}
-                    className="mt-0.5 w-full rounded-xl border-2 bg-white px-2 py-1.5 font-body text-sm outline-none"
-                    style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                  >
-                    {ACCENTS.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="sm:col-span-2">
-                  <span className="font-display text-[10px] tracking-wider opacity-60">TITLE</span>
-                  <input
-                    value={q.title}
-                    onChange={(e) => patchQuest(q.id, { title: e.target.value })}
-                    className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                    style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                  />
-                </label>
-                <label className="sm:col-span-2">
-                  <span className="font-display text-[10px] tracking-wider opacity-60">DETAIL</span>
-                  <textarea
-                    value={q.detail}
-                    onChange={(e) => patchQuest(q.id, { detail: e.target.value })}
-                    rows={2}
-                    className="mt-0.5 w-full resize-none rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                    style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                  />
-                </label>
-                <label>
-                  <span className="font-display text-[10px] tracking-wider opacity-60">ORDER</span>
-                  <input
-                    type="number"
-                    value={q.sort_order}
-                    onChange={(e) =>
-                      patchQuest(q.id, { sort_order: Math.max(0, Number(e.target.value) || 0) })
-                    }
-                    className="mt-0.5 w-full rounded-xl border-2 bg-white px-2.5 py-1.5 font-body text-sm outline-none"
-                    style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
-                  />
-                </label>
-              </div>
-              <div className="mt-2 flex gap-2">
-                <ChunkyButton type="button" color="blush" size="sm" onClick={() => void saveQuest(q)}>
-                  Save
-                </ChunkyButton>
-                <ChunkyButton
-                  type="button"
-                  color="white"
-                  size="sm"
-                  icon={<Trash2 size={14} />}
-                  onClick={() => void deleteQuest(q)}
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex justify-end">
+        {tab === "tasks" ? (
+          <ChunkyButton
+            type="button"
+            color="grass"
+            size="sm"
+            disabled={adding}
+            icon={<Plus size={14} />}
+            onClick={() => void addTask()}
+          >
+            {adding ? "Adding…" : "Add task"}
+          </ChunkyButton>
+        ) : (
+          <ChunkyButton
+            type="button"
+            color="sky"
+            size="sm"
+            disabled={adding}
+            icon={<Plus size={14} />}
+            onClick={() => void addQuest()}
+          >
+            {adding ? "Adding…" : "Add quest"}
+          </ChunkyButton>
+        )}
+      </div>
+
+      <div
+        className="kz-sticker mt-3 rounded-3xl p-1"
+        style={{ ["--ink" as never]: PALETTE.ink }}
+      >
+        {tab === "tasks" && (
+          <ul>
+            {tasks.length === 0 && (
+              <li className="px-3 py-8 text-center font-hand text-sm" style={{ color: PALETTE.ink, opacity: 0.6 }}>
+                No tasks yet — tap Add task.
+              </li>
+            )}
+            {tasks.map((t) => {
+              const doneToday = t.completed_at === today;
+              return (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-2 border-t-2 border-dashed px-3 py-2.5 first:border-t-0"
+                  style={{ borderColor: `${PALETTE.ink}18` }}
                 >
-                  Delete
-                </ChunkyButton>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold" style={{ color: PALETTE.ink }}>
+                      {t.task_name}
+                    </div>
+                    <div className="font-display text-xs opacity-60" style={{ color: PALETTE.ink }}>
+                      +{t.points} pts
+                      {doneToday ? " · done today" : ""}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`Edit ${t.task_name}`}
+                    onClick={() => setTaskDraft({ ...t })}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-transform active:scale-95"
+                    style={{
+                      background: "#fff",
+                      border: `2px solid ${PALETTE.ink}`,
+                      boxShadow: `0 2px 0 ${PALETTE.ink}`,
+                      color: PALETTE.ink,
+                    }}
+                  >
+                    <Pencil size={16} strokeWidth={2.4} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {tab === "quests" && (
+          <ul>
+            {quests.length === 0 && (
+              <li className="px-3 py-8 text-center font-hand text-sm" style={{ color: PALETTE.ink, opacity: 0.6 }}>
+                No quests — run the latest database migration, or tap Add quest.
+              </li>
+            )}
+            {quests.map((q) => (
+              <li
+                key={q.id}
+                className="flex items-center gap-2 border-t-2 border-dashed px-3 py-2.5 first:border-t-0"
+                style={{ borderColor: `${PALETTE.ink}18` }}
+              >
+                <div
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-bold text-white"
+                  style={{
+                    background: `linear-gradient(180deg, ${PALETTE[q.accent]}, ${shade(PALETTE[q.accent], -12)})`,
+                    border: `2px solid ${PALETTE.ink}`,
+                  }}
+                >
+                  {q.tag.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold" style={{ color: PALETTE.ink }}>
+                    {q.title}
+                  </div>
+                  <div className="truncate font-hand text-xs opacity-65" style={{ color: PALETTE.ink }}>
+                    {q.detail}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`Edit ${q.title}`}
+                  onClick={() => setQuestDraft({ ...q })}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-transform active:scale-95"
+                  style={{
+                    background: "#fff",
+                    border: `2px solid ${PALETTE.ink}`,
+                    boxShadow: `0 2px 0 ${PALETTE.ink}`,
+                    color: PALETTE.ink,
+                  }}
+                >
+                  <Pencil size={16} strokeWidth={2.4} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {taskDraft && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-6 pt-16 sm:items-center"
+          style={{ background: "rgba(19,41,75,0.45)" }}
+          onClick={() => setTaskDraft(null)}
+        >
+          <div
+            className="kz-sticker max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[24px] p-4"
+            style={{ ["--ink" as never]: PALETTE.ink }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
+                Edit task
               </div>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setTaskDraft(null)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
+                style={{
+                  background: "#fff",
+                  border: `2px solid ${PALETTE.ink}`,
+                  boxShadow: `0 2px 0 ${PALETTE.ink}`,
+                  color: PALETTE.ink,
+                }}
+              >
+                <X size={18} />
+              </button>
             </div>
-          ))}
+
+            <label className="block">
+              <span className="font-display text-[10px] tracking-wider opacity-60">NAME</span>
+              <input
+                value={taskDraft.task_name}
+                onChange={(e) => setTaskDraft({ ...taskDraft, task_name: e.target.value })}
+                className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+              />
+            </label>
+
+            <label className="mt-3 block">
+              <span className="font-display text-[10px] tracking-wider opacity-60">POINTS</span>
+              <input
+                type="number"
+                min={1}
+                max={99}
+                disabled={taskDraft.completed_at === today}
+                value={taskDraft.points}
+                onChange={(e) =>
+                  setTaskDraft({
+                    ...taskDraft,
+                    points: Math.max(1, Math.min(99, Number(e.target.value) || 1)),
+                  })
+                }
+                className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none disabled:opacity-45"
+                style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+              />
+            </label>
+            {taskDraft.completed_at === today && (
+              <p className="mt-1 font-hand text-xs" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+                Done today — uncheck on Today to change points.
+              </p>
+            )}
+
+            <label className="mt-3 block">
+              <span className="font-display text-[10px] tracking-wider opacity-60">ORDER</span>
+              <input
+                type="number"
+                value={taskDraft.sort_order}
+                onChange={(e) =>
+                  setTaskDraft({
+                    ...taskDraft,
+                    sort_order: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+                className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+              />
+            </label>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <ChunkyButton type="button" color="blush" full onClick={() => void saveTaskFromDraft(taskDraft)}>
+                Save
+              </ChunkyButton>
+              <ChunkyButton
+                type="button"
+                color="white"
+                full
+                icon={<Trash2 size={16} />}
+                onClick={() => void deleteTaskRow(taskDraft)}
+              >
+                Delete
+              </ChunkyButton>
+            </div>
+          </div>
         </div>
-      </section>
+      )}
+
+      {questDraft && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-6 pt-16 sm:items-center"
+          style={{ background: "rgba(19,41,75,0.45)" }}
+          onClick={() => setQuestDraft(null)}
+        >
+          <div
+            className="kz-sticker max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[24px] p-4"
+            style={{ ["--ink" as never]: PALETTE.ink }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
+                Edit quest
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setQuestDraft(null)}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
+                style={{
+                  background: "#fff",
+                  border: `2px solid ${PALETTE.ink}`,
+                  boxShadow: `0 2px 0 ${PALETTE.ink}`,
+                  color: PALETTE.ink,
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block sm:col-span-1">
+                <span className="font-display text-[10px] tracking-wider opacity-60">TAG</span>
+                <input
+                  value={questDraft.tag}
+                  onChange={(e) => setQuestDraft({ ...questDraft, tag: e.target.value })}
+                  className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                  style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+                />
+              </label>
+              <label className="block sm:col-span-1">
+                <span className="font-display text-[10px] tracking-wider opacity-60">ACCENT</span>
+                <select
+                  value={questDraft.accent}
+                  onChange={(e) =>
+                    setQuestDraft({ ...questDraft, accent: e.target.value as AccentColor })
+                  }
+                  className="mt-1 w-full rounded-xl border-2 bg-white px-2 py-2 font-body text-sm outline-none"
+                  style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+                >
+                  {ACCENTS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="font-display text-[10px] tracking-wider opacity-60">TITLE</span>
+                <input
+                  value={questDraft.title}
+                  onChange={(e) => setQuestDraft({ ...questDraft, title: e.target.value })}
+                  className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                  style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="font-display text-[10px] tracking-wider opacity-60">DETAIL</span>
+                <textarea
+                  value={questDraft.detail}
+                  onChange={(e) => setQuestDraft({ ...questDraft, detail: e.target.value })}
+                  rows={3}
+                  className="mt-1 w-full resize-none rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                  style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="font-display text-[10px] tracking-wider opacity-60">ORDER</span>
+                <input
+                  type="number"
+                  value={questDraft.sort_order}
+                  onChange={(e) =>
+                    setQuestDraft({
+                      ...questDraft,
+                      sort_order: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
+                  style={{ borderColor: PALETTE.ink, color: PALETTE.ink }}
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <ChunkyButton type="button" color="blush" full onClick={() => void saveQuestFromDraft(questDraft)}>
+                Save
+              </ChunkyButton>
+              <ChunkyButton
+                type="button"
+                color="white"
+                full
+                icon={<Trash2 size={16} />}
+                onClick={() => void deleteQuestRow(questDraft)}
+              >
+                Delete
+              </ChunkyButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
