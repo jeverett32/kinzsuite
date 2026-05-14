@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Plus, Send, Heart } from "lucide-react";
 import { format, isSameDay } from "date-fns";
-import { PetPortrait } from "@/components/ui/PetPortrait";
+import { Avatar } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import type { Message, Profile } from "@/lib/supabase/types";
@@ -98,7 +98,13 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
               boxShadow: `0 3px 0 ${PALETTE.ink}`,
             }}
           >
-            <PetPortrait art={3} size={42} rounded={99} halo={false} border={false} />
+            <Avatar
+              emoji={partner?.avatar_emoji ?? "🙂"}
+              color={partner?.accent_color ?? "blush"}
+              size={42}
+              border={false}
+              halo={false}
+            />
           </div>
           <span
             style={{
@@ -134,19 +140,19 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
         ref={scrollerRef}
         className="kz-hscroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3.5 pb-2 pt-1.5"
       >
-        {messages.map((m, i) => (
-          <ChatBubble
-            key={m.id}
-            msg={m}
-            prev={messages[i - 1]}
-            isMe={m.sender_id === userId}
-            senderName={
-              m.sender_id === userId
-                ? "You"
-                : profiles.find((p) => p.id === m.sender_id)?.display_name || "Them"
-            }
-          />
-        ))}
+        {messages.map((m, i) => {
+          const sender = profiles.find((p) => p.id === m.sender_id);
+          return (
+            <ChatBubble
+              key={m.id}
+              msg={m}
+              prev={messages[i - 1]}
+              isMe={m.sender_id === userId}
+              senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
+              senderTone={sender?.accent_color ?? "sky"}
+            />
+          );
+        })}
         {messages.length === 0 && (
           <div className="font-hand mx-auto mt-10 text-center text-lg" style={{ color: PALETTE.ink, opacity: 0.5 }}>
             no messages yet — say hi!
@@ -255,18 +261,21 @@ function ChatBubble({
   prev,
   isMe,
   senderName,
+  senderTone,
 }: {
   msg: Message;
   prev?: Message;
   isMe: boolean;
   senderName: string;
+  senderTone: import("@/lib/utils").PaletteColor;
 }) {
   const consecutive =
     prev &&
     prev.sender_id === msg.sender_id &&
     isSameDay(new Date(prev.created_at), new Date(msg.created_at));
+  const tone = PALETTE[senderTone];
   const bubbleBg = isMe
-    ? `linear-gradient(180deg, ${PALETTE.sky}, ${shade(PALETTE.sky, -10)})`
+    ? `linear-gradient(180deg, ${tone}, ${shade(tone, -10)})`
     : "#fff";
   const text = isMe ? "#fff" : PALETTE.ink;
   const radius = isMe

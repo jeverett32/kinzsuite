@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name")
+    .select("display_name, avatar_emoji, accent_color")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -31,6 +31,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userId={user.id}
           userEmail={user.email ?? null}
           displayName={profile?.display_name ?? ""}
+          avatarEmoji={profile?.avatar_emoji ?? "🙂"}
+          accentColor={profile?.accent_color ?? "sky"}
         />
         <main className="kz-hscroll relative z-10 min-h-0 flex-1 overflow-y-auto pb-4">
           {children}

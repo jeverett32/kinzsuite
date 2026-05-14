@@ -11,16 +11,20 @@ export function PartnerToggle({
   meName,
   partnerName,
   noun = "pets",
+  meTone = "sky",
+  partnerTone = "blush",
 }: {
   value: Side;
   onChange: (v: Side) => void;
   meName: string;
   partnerName: string;
   noun?: string;
+  meTone?: PaletteColor;
+  partnerTone?: PaletteColor;
 }) {
   const options: { id: Side; label: string; tone: PaletteColor }[] = [
-    { id: "me", label: `${meName}'s ${noun}`, tone: "sky" },
-    { id: "partner", label: `${partnerName}'s ${noun}`, tone: "blush" },
+    { id: "me", label: `${meName}'s ${noun}`, tone: meTone },
+    { id: "partner", label: `${partnerName}'s ${noun}`, tone: partnerTone },
   ];
   return (
     <div className="flex w-full gap-2">

@@ -2,18 +2,28 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MessageCircle, User } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { Avatar } from "@/components/ui/Avatar";
 import { ProfileSheet } from "@/components/shell/ProfileSheet";
 import { PALETTE, shade } from "@/lib/utils";
+import type { AccentColor } from "@/lib/supabase/types";
 
 type Props = {
   userId: string;
   userEmail: string | null;
   displayName: string;
+  avatarEmoji: string;
+  accentColor: AccentColor;
 };
 
-export function Header({ userId, userEmail, displayName }: Props) {
+export function Header({
+  userId,
+  userEmail,
+  displayName,
+  avatarEmoji,
+  accentColor,
+}: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
 
   return (
@@ -31,7 +41,10 @@ export function Header({ userId, userEmail, displayName }: Props) {
           }}
         >
           <Logo size={32} />
-          <span className="font-display text-lg leading-none" style={{ color: PALETTE.ink }}>
+          <span
+            className="font-display text-lg leading-none"
+            style={{ color: PALETTE.ink }}
+          >
             Kinz<span style={{ color: PALETTE.blush }}>Suite</span>
           </span>
         </div>
@@ -55,16 +68,19 @@ export function Header({ userId, userEmail, displayName }: Props) {
             type="button"
             onClick={() => setProfileOpen(true)}
             aria-label="Profile"
-            className="kz-chunky font-display grid place-items-center"
+            className="grid place-items-center"
             style={{
               width: 40,
               height: 40,
               padding: 0,
-              background: `linear-gradient(180deg, ${PALETTE.sun}, ${shade(PALETTE.sun, -15)})`,
-              color: PALETTE.ink,
+              borderRadius: 999,
+              background: "transparent",
+              border: "none",
+              cursor: "pointer",
+              boxShadow: `0 3px 0 ${PALETTE.ink}`,
             }}
           >
-            <User size={18} strokeWidth={2.4} />
+            <Avatar emoji={avatarEmoji} color={accentColor} size={40} />
           </button>
         </div>
       </header>
@@ -75,6 +91,8 @@ export function Header({ userId, userEmail, displayName }: Props) {
         userId={userId}
         userEmail={userEmail}
         initialDisplayName={displayName}
+        initialAvatarEmoji={avatarEmoji}
+        initialAccentColor={accentColor}
       />
     </>
   );

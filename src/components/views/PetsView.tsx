@@ -72,6 +72,8 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
           onChange={setSide}
           meName={myName}
           partnerName={partnerName}
+          meTone={me?.accent_color ?? "sky"}
+          partnerTone={partner?.accent_color ?? "blush"}
         />
       </div>
 

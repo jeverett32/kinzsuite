@@ -35,12 +35,12 @@ export function SkyBackground({ showGrass = false }: { showGrass?: boolean }) {
       <div
         className="absolute"
         style={{
-          top: "max(10px, env(safe-area-inset-top, 0px))",
-          right: "max(10px, env(safe-area-inset-right, 0px))",
-          width: 200,
-          height: 200,
+          top: "max(0px, env(safe-area-inset-top, 0px))",
+          right: "max(0px, env(safe-area-inset-right, 0px))",
+          width: 220,
+          height: 220,
           borderRadius: 999,
-          background: `radial-gradient(circle at 100% 0%, ${PALETTE.sun}aa 0%, ${PALETTE.sun}55 22%, transparent 60%)`,
+          background: `radial-gradient(circle, ${PALETTE.sun}aa 0%, transparent 65%)`,
         }}
       />
       <div className="absolute inset-0 overflow-hidden">

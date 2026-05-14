@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, LogOut, Save } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
+import { Avatar, AVATAR_EMOJIS, ACCENT_COLOR_OPTIONS } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
-import { PALETTE } from "@/lib/utils";
+import { PALETTE, shade } from "@/lib/utils";
+import type { AccentColor } from "@/lib/supabase/types";
 
 type Props = {
   open: boolean;
@@ -12,6 +14,8 @@ type Props = {
   userId: string;
   userEmail: string | null;
   initialDisplayName: string;
+  initialAvatarEmoji: string;
+  initialAccentColor: AccentColor;
 };
 
 export function ProfileSheet({
@@ -20,18 +24,24 @@ export function ProfileSheet({
   userId,
   userEmail,
   initialDisplayName,
+  initialAvatarEmoji,
+  initialAccentColor,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [name, setName] = useState(initialDisplayName);
+  const [emoji, setEmoji] = useState(initialAvatarEmoji);
+  const [color, setColor] = useState<AccentColor>(initialAccentColor);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
 
   useEffect(() => {
     if (open) {
       setName(initialDisplayName);
+      setEmoji(initialAvatarEmoji);
+      setColor(initialAccentColor);
       setStatus("idle");
     }
-  }, [open, initialDisplayName]);
+  }, [open, initialDisplayName, initialAvatarEmoji, initialAccentColor]);
 
   if (!open) return null;
 
@@ -40,12 +50,15 @@ export function ProfileSheet({
     setStatus("idle");
     const { error } = await supabase
       .from("profiles")
-      .update({ display_name: name.trim() || null })
+      .update({
+        display_name: name.trim() || null,
+        avatar_emoji: emoji,
+        accent_color: color,
+      })
       .eq("id", userId);
     setSaving(false);
     setStatus(error ? "error" : "saved");
     if (!error) {
-      // Hard refresh so server components pick up the new name.
       window.setTimeout(() => {
         onClose();
         window.location.reload();
@@ -79,11 +92,19 @@ export function ProfileSheet({
           <X size={18} />
         </button>
 
-        <div className="font-display text-[22px]" style={{ color: PALETTE.ink }}>
-          YOUR PROFILE
-        </div>
-        <div className="font-hand text-lg" style={{ color: PALETTE.ink, opacity: 0.6 }}>
-          {userEmail || "signed in"}
+        <div className="flex items-center gap-3">
+          <Avatar emoji={emoji} color={color} size={64} />
+          <div className="min-w-0 flex-1">
+            <div className="font-display text-[22px]" style={{ color: PALETTE.ink }}>
+              YOUR PROFILE
+            </div>
+            <div
+              className="font-hand truncate text-base"
+              style={{ color: PALETTE.ink, opacity: 0.6 }}
+            >
+              {userEmail || "signed in"}
+            </div>
+          </div>
         </div>
 
         <label className="mt-4 block">
@@ -111,13 +132,101 @@ export function ProfileSheet({
           </div>
         </label>
 
+        <div className="mt-3">
+          <div
+            className="font-display mb-1.5 text-[11px] tracking-wider"
+            style={{ color: PALETTE.ink, opacity: 0.6 }}
+          >
+            COLOR
+          </div>
+          <div className="flex gap-2">
+            {ACCENT_COLOR_OPTIONS.map((c) => {
+              const bg = PALETTE[c];
+              const active = color === c;
+              return (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  aria-label={c}
+                  className="grid place-items-center"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 999,
+                    background: `linear-gradient(180deg, ${bg}, ${shade(bg, -15)})`,
+                    border: `2.5px solid ${PALETTE.ink}`,
+                    boxShadow: active
+                      ? `0 4px 0 ${PALETTE.ink}`
+                      : `0 2px 0 ${PALETTE.ink}`,
+                    transform: active ? "translateY(-2px)" : "translateY(0)",
+                    cursor: "pointer",
+                  }}
+                >
+                  {active && (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 999,
+                        background: "#fff",
+                        border: `2px solid ${PALETTE.ink}`,
+                      }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div
+            className="font-display mb-1.5 text-[11px] tracking-wider"
+            style={{ color: PALETTE.ink, opacity: 0.6 }}
+          >
+            EMOJI
+          </div>
+          <div className="grid grid-cols-6 gap-2">
+            {AVATAR_EMOJIS.map((e) => {
+              const active = emoji === e;
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => setEmoji(e)}
+                  aria-label={e}
+                  className="grid place-items-center"
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: 14,
+                    border: `2.5px solid ${PALETTE.ink}`,
+                    background: active ? `${PALETTE[color]}30` : "#fff",
+                    boxShadow: active
+                      ? `0 3px 0 ${PALETTE.ink}`
+                      : `0 2px 0 ${PALETTE.ink}`,
+                    fontSize: 22,
+                    cursor: "pointer",
+                    transform: active ? "translateY(-1px)" : "translateY(0)",
+                  }}
+                >
+                  {e}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {status === "error" && (
-          <p className="mt-2 text-sm font-semibold text-red-600">
+          <p className="mt-3 text-sm font-semibold text-red-600">
             Couldn&apos;t save — try again?
           </p>
         )}
         {status === "saved" && (
-          <p className="mt-2 text-sm font-semibold" style={{ color: PALETTE.grass }}>
+          <p
+            className="mt-3 text-sm font-semibold"
+            style={{ color: PALETTE.grass }}
+          >
             Saved!
           </p>
         )}
@@ -127,7 +236,7 @@ export function ProfileSheet({
             type="button"
             color="blush"
             full
-            disabled={saving || !name.trim()}
+            disabled={saving}
             onClick={save}
             icon={<Save size={16} strokeWidth={2.4} />}
           >

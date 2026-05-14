@@ -192,6 +192,8 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
           meName={meName}
           partnerName={partnerName}
           noun="tasks"
+          meTone={me?.accent_color ?? "sky"}
+          partnerTone={partner?.accent_color ?? "blush"}
         />
       </div>
 

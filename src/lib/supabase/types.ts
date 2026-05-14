@@ -1,3 +1,5 @@
+export type AccentColor = "sky" | "blush" | "sun" | "grass" | "purple";
+
 export type Database = {
   public: {
     Tables: {
@@ -6,6 +8,8 @@ export type Database = {
           id: string;
           display_name: string | null;
           avatar_url: string | null;
+          accent_color: AccentColor;
+          avatar_emoji: string;
           total_points: number;
           created_at: string;
         };
@@ -13,11 +17,15 @@ export type Database = {
           id: string;
           display_name?: string | null;
           avatar_url?: string | null;
+          accent_color?: AccentColor;
+          avatar_emoji?: string;
           total_points?: number;
         };
         Update: {
           display_name?: string | null;
           avatar_url?: string | null;
+          accent_color?: AccentColor;
+          avatar_emoji?: string;
           total_points?: number;
         };
         Relationships: [];
