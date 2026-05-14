@@ -54,12 +54,12 @@ function Wheel({
   const [spinning, setSpinning] = useState(false);
   const N = quests.length;
   const slice = N > 0 ? 360 / N : 0;
-  const SIZE = 280;
+  const SIZE = 220;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
   const rOuter = SIZE / 2 - 4;
-  const rRim = rOuter - 10;
-  const rHub = 62;
+  const rRim = rOuter - 8;
+  const rHub = 50;
 
   function spin() {
     if (spinning || N < 1) return;
