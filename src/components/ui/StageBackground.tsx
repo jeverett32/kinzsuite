@@ -11,46 +11,66 @@ const WOOD_DARK = "#6B3F12";
 const WOOD = "#A66A2C";
 const WOOD_LIGHT = "#C98C4D";
 
-function RopeKnot() {
+function RopeTie() {
   return (
-    <svg viewBox="0 0 40 70" width={34} height={60}>
+    <svg viewBox="0 0 96 80" width={96} height={80}>
       <ellipse
-        cx={20}
-        cy={14}
-        rx={17}
-        ry={9}
+        cx={88}
+        cy={20}
+        rx={7}
+        ry={12}
+        fill={GOLD_DEEP}
+        stroke={PALETTE.ink}
+        strokeWidth={1.5}
+      />
+      <path
+        d="M 84 12 Q 90 16 88 22 M 84 18 Q 90 22 88 28 M 84 24 Q 90 28 88 34"
+        stroke={GOLD_PALE}
+        strokeWidth={1}
+        fill="none"
+        opacity={0.7}
+      />
+
+      <path
+        d="M 2 12 Q 4 10 8 12 L 86 14 Q 92 16 92 22 L 90 28 Q 86 32 82 30 L 6 28 Q 2 26 2 22 Z"
         fill={GOLD}
         stroke={PALETTE.ink}
         strokeWidth={1.5}
       />
-      {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-        <path
-          key={i}
-          d={`M ${4 + i * 5} 7 Q ${7 + i * 5} 14 ${4 + i * 5} 21`}
-          stroke={GOLD_DEEP}
-          strokeWidth={0.9}
-          fill="none"
-        />
-      ))}
-      <ellipse
-        cx={20}
-        cy={14}
-        rx={17}
-        ry={9}
-        fill="none"
-        stroke={GOLD_PALE}
-        strokeWidth={0.6}
-        opacity={0.7}
-      />
-      <circle cx={20} cy={28} r={3.5} fill={GOLD} stroke={PALETTE.ink} strokeWidth={1.2} />
+      {Array.from({ length: 14 }).map((_, i) => {
+        const x = 6 + i * 6;
+        return (
+          <path
+            key={i}
+            d={`M ${x} 13 Q ${x + 3} 20 ${x} 28`}
+            stroke={GOLD_DEEP}
+            strokeWidth={1.1}
+            fill="none"
+          />
+        );
+      })}
       <path
-        d="M 15 30 L 13 58 M 18 30 L 17 62 M 22 30 L 23 62 M 25 30 L 27 58"
+        d="M 4 16 Q 44 14 86 18"
+        stroke={GOLD_PALE}
+        strokeWidth={1}
+        fill="none"
+        opacity={0.8}
+      />
+
+      <path
+        d="M 44 28 Q 42 34 46 38 L 50 38 Q 54 34 52 28 Z"
+        fill={GOLD}
+        stroke={PALETTE.ink}
+        strokeWidth={1.2}
+      />
+      <path
+        d="M 40 38 L 38 64 M 44 38 L 43 70 M 48 38 L 49 70 M 52 38 L 54 64 M 56 38 L 58 60"
         stroke={GOLD_DEEP}
-        strokeWidth={1.4}
+        strokeWidth={1.5}
         strokeLinecap="round"
       />
       <path
-        d="M 12 58 Q 20 66 28 58 L 26 62 Q 20 68 14 62 Z"
+        d="M 36 64 Q 48 72 60 64 L 58 70 Q 48 76 38 70 Z"
         fill={GOLD}
         stroke={PALETTE.ink}
         strokeWidth={1.2}
@@ -100,29 +120,29 @@ export function StageBackground() {
              Q 44 8 36 18
              Q 24 28 14 38
              Q 4 46 4 52
-             Q 8 62 18 74
-             Q 28 86 30 96
+             Q 6 64 10 78
+             Q 14 88 16 96
              L 0 96 Z"
           fill="url(#drape-l-grad)"
           stroke={PALETTE.ink}
           strokeWidth={0.3}
         />
         <path
-          d="M 6 4 Q 22 18 18 34 Q 10 46 12 54 Q 18 68 26 82 Q 30 92 26 96"
+          d="M 6 4 Q 22 18 18 34 Q 10 46 12 54 Q 14 68 14 86"
           stroke={RED_DEEP}
           strokeWidth={0.5}
           fill="none"
           opacity={0.7}
         />
         <path
-          d="M 14 4 Q 28 18 24 34 Q 16 46 18 54 Q 22 68 28 82"
+          d="M 14 4 Q 28 18 24 34 Q 16 46 16 54 Q 17 70 16 88"
           stroke={RED_DEEP}
           strokeWidth={0.4}
           fill="none"
           opacity={0.5}
         />
         <path
-          d="M 24 4 Q 34 18 30 34"
+          d="M 24 4 Q 34 18 30 32"
           stroke={RED_DEEP}
           strokeWidth={0.35}
           fill="none"
@@ -142,29 +162,29 @@ export function StageBackground() {
              Q 56 8 64 18
              Q 76 28 86 38
              Q 96 46 96 52
-             Q 92 62 82 74
-             Q 72 86 70 96
+             Q 94 64 90 78
+             Q 86 88 84 96
              L 100 96 Z"
           fill="url(#drape-r-grad)"
           stroke={PALETTE.ink}
           strokeWidth={0.3}
         />
         <path
-          d="M 94 4 Q 78 18 82 34 Q 90 46 88 54 Q 82 68 74 82 Q 70 92 74 96"
+          d="M 94 4 Q 78 18 82 34 Q 90 46 88 54 Q 86 68 86 86"
           stroke={RED_DEEP}
           strokeWidth={0.5}
           fill="none"
           opacity={0.7}
         />
         <path
-          d="M 86 4 Q 72 18 76 34 Q 84 46 82 54 Q 78 68 72 82"
+          d="M 86 4 Q 72 18 76 34 Q 84 46 84 54 Q 83 70 84 88"
           stroke={RED_DEEP}
           strokeWidth={0.4}
           fill="none"
           opacity={0.5}
         />
         <path
-          d="M 76 4 Q 66 18 70 34"
+          d="M 76 4 Q 66 18 70 32"
           stroke={RED_DEEP}
           strokeWidth={0.35}
           fill="none"
@@ -179,11 +199,11 @@ export function StageBackground() {
         />
       </svg>
 
-      <div className="absolute" style={{ top: "44%", left: "1%" }}>
-        <RopeKnot />
+      <div className="absolute" style={{ top: "46%", left: "-2%" }}>
+        <RopeTie />
       </div>
-      <div className="absolute" style={{ top: "44%", right: "1%", transform: "scaleX(-1)" }}>
-        <RopeKnot />
+      <div className="absolute" style={{ top: "46%", right: "-2%", transform: "scaleX(-1)" }}>
+        <RopeTie />
       </div>
 
       <div
