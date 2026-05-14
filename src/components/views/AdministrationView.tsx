@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Pencil, Plus, Trash2, X } from "lucide-react";
+import { ArrowLeft, Bell, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { createClient } from "@/lib/supabase/client";
 import { WHEEL_SLICE_COUNT } from "@/lib/quests";
@@ -46,6 +46,8 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
   );
   const [err, setErr] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [pushTestBusy, setPushTestBusy] = useState(false);
+  const [pushTestOk, setPushTestOk] = useState<string | null>(null);
 
   /** Edit sheet: draft copies so list state stays stable until Save. */
   const [taskDraft, setTaskDraft] = useState<DailyTask | null>(null);
@@ -54,6 +56,25 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
   function flashErr(e: unknown) {
     setErr(formatErr(e));
     window.setTimeout(() => setErr(null), 6000);
+  }
+
+  async function sendTestPush() {
+    setPushTestOk(null);
+    setPushTestBusy(true);
+    try {
+      const res = await fetch("/api/push/test", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; sent?: number; total?: number };
+      if (!res.ok) {
+        flashErr(new Error(typeof data.error === "string" ? data.error : "Test notification failed."));
+        return;
+      }
+      const n = typeof data.sent === "number" ? data.sent : 0;
+      const t = typeof data.total === "number" ? data.total : n;
+      setPushTestOk(`Sent test to ${n} of ${t} saved subscription(s). Check your device for the alert.`);
+      window.setTimeout(() => setPushTestOk(null), 8000);
+    } finally {
+      setPushTestBusy(false);
+    }
   }
 
   async function saveTaskFromDraft(d: DailyTask) {
@@ -180,6 +201,39 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
           {err}
         </div>
       )}
+
+      <div
+        className="mt-4 rounded-3xl border-2 px-3 py-3"
+        style={{
+          borderColor: PALETTE.ink,
+          background: "rgba(255,255,255,0.88)",
+          boxShadow: `0 3px 0 ${PALETTE.ink}`,
+        }}
+      >
+        <div className="font-display text-sm tracking-wide" style={{ color: PALETTE.ink }}>
+          PUSH NOTIFICATIONS
+        </div>
+        <p className="font-hand mt-1 text-xs leading-snug opacity-80" style={{ color: PALETTE.ink }}>
+          Sends a test alert to this browser if you already enabled chat alerts (Chat → Get alerts for new messages).
+        </p>
+        <div className="mt-2.5">
+          <ChunkyButton
+            type="button"
+            color="sky"
+            size="sm"
+            disabled={pushTestBusy}
+            icon={<Bell size={14} />}
+            onClick={() => void sendTestPush()}
+          >
+            {pushTestBusy ? "Sending…" : "Send test notification"}
+          </ChunkyButton>
+        </div>
+        {pushTestOk && (
+          <p className="font-hand mt-2 text-xs font-medium leading-snug" style={{ color: PALETTE.grass }}>
+            {pushTestOk}
+          </p>
+        )}
+      </div>
 
       <div
         className="mt-4 flex rounded-full p-1"
