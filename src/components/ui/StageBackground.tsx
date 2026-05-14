@@ -175,7 +175,7 @@ export function StageBackground() {
       <div
         className="absolute inset-x-0 bottom-0"
         style={{
-          height: "26%",
+          height: "38%",
           background: `linear-gradient(180deg, ${WOOD_DARK} 0%, ${WOOD} 35%, ${WOOD_LIGHT} 100%)`,
           borderTop: `3px solid ${PALETTE.ink}`,
           boxShadow: `inset 0 8px 16px rgba(0,0,0,0.3)`,

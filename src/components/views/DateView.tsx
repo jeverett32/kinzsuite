@@ -440,7 +440,7 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
         style={{ aspectRatio: "5 / 4", border: `3px solid ${PALETTE.ink}` }}
       >
         <StageBackground />
-        <div className="absolute inset-x-0 bottom-1 flex justify-center">
+        <div className="absolute inset-x-0 flex justify-center" style={{ bottom: -18 }}>
           <Wheel quests={quests} onLand={setQuestIdx} alignSliceIndex={alignSliceIndex} />
         </div>
       </div>
