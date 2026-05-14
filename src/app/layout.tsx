@@ -27,7 +27,13 @@ export const metadata: Metadata = {
       { url: "/icon.webp", type: "image/webp", sizes: "512x512" },
       { url: "/icon.png", type: "image/png", sizes: "512x512" },
     ],
-    apple: "/icon.png",
+    apple: [
+      {
+        url: "/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
   },
   appleWebApp: {
     capable: true,
