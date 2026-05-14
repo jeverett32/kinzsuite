@@ -4,10 +4,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { Chip } from "@/components/ui/Chip";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
+import { StageBackground } from "@/components/ui/StageBackground";
 import { createClient } from "@/lib/supabase/client";
 import { STATIC_QUESTS_FALLBACK, type Quest } from "@/lib/quests";
 import { PALETTE } from "@/lib/utils";
 import type { WheelQuest } from "@/lib/supabase/types";
+
+const STAGE_BLUE = "#8FD8F2";
+const STAGE_BLUE_DEEP = "#5BB8DC";
+const STAGE_BLUE_DARK = "#3F8FB8";
 
 const SLICE_COLORS = [
   "#E94B7B", "#E2553A", "#F0A93A", "#F2D24B",
@@ -99,12 +104,60 @@ function Wheel({
     );
   }
 
+  const WHEEL_TOP = 70;
+  const BASE_H = 110;
+  const BASE_W = SIZE + 40;
+  const POST_W = 18;
+  const POST_TOP = 30;
+  const POST_BOTTOM_Y = WHEEL_TOP + SIZE + 40;
+  const OUTER_H = WHEEL_TOP + SIZE + BASE_H + 10;
+
   return (
-    <div className="relative mx-auto" style={{ width: SIZE + 60, height: SIZE + 80 }}>
+    <div className="relative mx-auto" style={{ width: SIZE + 60, height: OUTER_H, perspective: "900px" }}>
+      <div
+        className="absolute left-1/2"
+        style={{
+          bottom: 8,
+          width: BASE_W,
+          height: BASE_H,
+          marginLeft: -BASE_W / 2,
+          background: `linear-gradient(180deg, ${STAGE_BLUE} 0%, ${STAGE_BLUE_DEEP} 100%)`,
+          border: `3px solid ${PALETTE.ink}`,
+          borderRadius: 14,
+          transform: "rotateX(55deg)",
+          transformOrigin: "50% 100%",
+          boxShadow: `0 10px 18px rgba(0,0,0,0.35)`,
+          zIndex: 1,
+        }}
+      />
+      <div
+        className="absolute left-1/2"
+        style={{
+          bottom: 0,
+          width: BASE_W - 30,
+          height: 18,
+          marginLeft: -(BASE_W - 30) / 2,
+          background: `radial-gradient(ellipse at center, rgba(0,0,0,0.45) 0%, transparent 70%)`,
+          zIndex: 0,
+        }}
+      />
+
       <div
         className="absolute left-1/2 -translate-x-1/2"
         style={{
-          top: 0,
+          top: POST_TOP,
+          width: POST_W,
+          height: POST_BOTTOM_Y - POST_TOP,
+          background: `linear-gradient(90deg, ${STAGE_BLUE_DARK} 0%, ${STAGE_BLUE} 45%, ${STAGE_BLUE_DEEP} 100%)`,
+          border: `3px solid ${PALETTE.ink}`,
+          borderRadius: 4,
+          zIndex: 2,
+        }}
+      />
+      <div
+        className="absolute left-1/2 -translate-x-1/2"
+        style={{
+          top: POST_TOP - 22,
           width: 0,
           height: 0,
           borderLeft: "14px solid transparent",
@@ -116,7 +169,7 @@ function Wheel({
       <div
         className="absolute left-1/2 -translate-x-1/2"
         style={{
-          top: 4,
+          top: POST_TOP - 18,
           width: 0,
           height: 0,
           borderLeft: "10px solid transparent",
@@ -132,7 +185,7 @@ function Wheel({
         height={SIZE}
         style={{
           position: "absolute",
-          top: 24,
+          top: WHEEL_TOP,
           left: "50%",
           marginLeft: -SIZE / 2,
           transform: `rotate(${rotation}deg)`,
@@ -141,6 +194,7 @@ function Wheel({
             ? "transform 4.2s cubic-bezier(0.17, 0.67, 0.32, 1.18)"
             : "none",
           filter: `drop-shadow(0 6px 0 ${PALETTE.ink}) drop-shadow(0 12px 12px rgba(0,0,0,0.25))`,
+          zIndex: 3,
         }}
       >
         <circle cx={cx} cy={cy} r={rOuter} fill="#fff" stroke={PALETTE.ink} strokeWidth={3} />
@@ -205,20 +259,24 @@ function Wheel({
         onClick={spin}
         disabled={spinning}
         aria-label="Spin the wheel"
-        className="font-display absolute left-1/2 -translate-x-1/2"
+        className="font-display absolute left-1/2"
         style={{
-          bottom: 0,
-          width: 100,
-          height: 100,
+          bottom: 22,
+          marginLeft: -45,
+          width: 90,
+          height: 90,
           borderRadius: 999,
           background: `radial-gradient(circle at 32% 28%, #ff9595 0%, #E33C3C 50%, #8a1419 100%)`,
           border: `3px solid ${PALETTE.ink}`,
           boxShadow: `0 8px 0 ${PALETTE.ink}, inset 0 -12px 0 -3px rgba(0,0,0,0.32), inset 0 10px 0 -3px rgba(255,255,255,0.45)`,
           color: "#fff",
-          fontSize: 24,
+          fontSize: 22,
           letterSpacing: 2,
           textShadow: "0 2px 0 rgba(0,0,0,0.5)",
           cursor: spinning ? "wait" : "pointer",
+          transform: "rotateX(18deg)",
+          transformOrigin: "50% 100%",
+          zIndex: 5,
         }}
       >
         SPIN
@@ -371,8 +429,12 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
   }
 
   return (
-    <div className="px-4 pb-6 pt-1">
-      <div className="mb-3 text-center">
+    <>
+      <div className="pointer-events-none fixed inset-0 z-0">
+        <StageBackground />
+      </div>
+      <div className="relative px-4 pb-6 pt-1">
+        <div className="mb-3 text-center">
         <div
           className="font-hand text-[26px] text-white"
           style={{ textShadow: `0 2px 0 ${PALETTE.ink}` }}
@@ -445,6 +507,7 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
           </ChunkyButton>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
