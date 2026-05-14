@@ -3,14 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { PALETTE, shade } from "@/lib/utils";
 
-type Mode =
-  | "checking"
-  | "cta"
-  | "synced"
-  | "ios_add_to_home"
-  | "hidden"
-  | "busy"
-  | "error";
+type Mode = "checking" | "cta" | "ios_add_to_home" | "hidden" | "busy" | "error";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -81,7 +74,7 @@ export function ChatPushNotificationsBar() {
       const existing = await reg.pushManager.getSubscription();
       if (existing && perm === "granted") {
         const ok = await postSubscription(existing);
-        setMode(ok ? "synced" : "cta");
+        setMode(ok ? "hidden" : "cta");
         return;
       }
 
@@ -113,7 +106,7 @@ export function ChatPushNotificationsBar() {
         });
       }
       const ok = await postSubscription(sub);
-      setMode(ok ? "synced" : "error");
+      setMode(ok ? "hidden" : "error");
     } catch {
       setMode("error");
     }
@@ -129,18 +122,6 @@ export function ChatPushNotificationsBar() {
       >
         On iPhone, add KinzSuite to your Home Screen and open that app, then tap below so we can alert you to new
         messages when you are not here.
-      </p>
-    );
-  }
-
-  if (mode === "synced") {
-    return (
-      <p
-        className="font-body px-3.5 pb-2 text-xs font-medium"
-        style={{ color: PALETTE.ink, opacity: 0.72 }}
-      >
-        You will get alerts for new chat messages (when your partner sends one and this device is allowed to notify
-        you).
       </p>
     );
   }
