@@ -11,6 +11,7 @@ export type Database = {
           accent_color: AccentColor;
           avatar_emoji: string;
           total_points: number;
+          chat_last_read_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -20,6 +21,7 @@ export type Database = {
           accent_color?: AccentColor;
           avatar_emoji?: string;
           total_points?: number;
+          chat_last_read_at?: string | null;
         };
         Update: {
           display_name?: string | null;
@@ -27,6 +29,7 @@ export type Database = {
           accent_color?: AccentColor;
           avatar_emoji?: string;
           total_points?: number;
+          chat_last_read_at?: string | null;
         };
         Relationships: [];
       };

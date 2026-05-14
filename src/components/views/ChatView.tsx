@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Plus, Send, Heart } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
+import { useChatUnread } from "@/components/shell/ChatUnreadContext";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import type { Message, Profile } from "@/lib/supabase/types";
@@ -17,6 +18,7 @@ type Props = {
 
 export function ChatView({ initialMessages, userId, profiles }: Props) {
   const supabase = useMemo(() => createClient(), []);
+  const { markChatRead } = useChatUnread();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -27,24 +29,29 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const partnerName = partner?.display_name || "Partner";
 
   useEffect(() => {
+    void markChatRead();
+  }, [markChatRead]);
+
+  useEffect(() => {
     const channel = supabase
       .channel("messages")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },
         (payload) => {
+          const next = payload.new as Message;
           setMessages((cur) => {
-            const next = payload.new as Message;
             if (cur.some((m) => m.id === next.id)) return cur;
             return [...cur, next];
           });
+          if (next.sender_id !== userId) void markChatRead();
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, userId, markChatRead]);
 
   useEffect(() => {
     const el = scrollerRef.current;

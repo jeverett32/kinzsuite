@@ -6,6 +6,7 @@ import { MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { ProfileSheet } from "@/components/shell/ProfileSheet";
+import { useChatUnread } from "@/components/shell/ChatUnreadContext";
 import { PALETTE, shade } from "@/lib/utils";
 import type { AccentColor } from "@/lib/supabase/types";
 
@@ -25,6 +26,7 @@ export function Header({
   accentColor,
 }: Props) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const { hasUnreadChat } = useChatUnread();
 
   return (
     <>
@@ -52,7 +54,7 @@ export function Header({
         <div className="flex items-center gap-2">
           <Link
             href="/chat"
-            aria-label="Chat"
+            aria-label={hasUnreadChat ? "Chat, unread messages" : "Chat"}
             className="kz-chunky font-display relative grid place-items-center"
             style={{
               width: 40,
@@ -63,6 +65,21 @@ export function Header({
             }}
           >
             <MessageCircle size={18} strokeWidth={2.4} />
+            {hasUnreadChat ? (
+              <span
+                className="absolute"
+                style={{
+                  top: 4,
+                  right: 4,
+                  width: 10,
+                  height: 10,
+                  borderRadius: 99,
+                  background: PALETTE.sun,
+                  border: `2px solid ${PALETTE.ink}`,
+                  boxShadow: `0 1px 0 ${PALETTE.ink}`,
+                }}
+              />
+            ) : null}
           </Link>
           <button
             type="button"
