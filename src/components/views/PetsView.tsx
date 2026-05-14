@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, X, Upload } from "lucide-react";
+import { Pencil, Plus, X, Upload } from "lucide-react";
 import { PolaroidCard } from "@/components/ui/PolaroidCard";
 import { PartnerToggle } from "@/components/ui/PartnerToggle";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
@@ -16,6 +16,13 @@ type Props = {
   me: Profile | null;
   partner: Profile | null;
 };
+
+const GENDER_OPTIONS = [
+  { value: "", label: "Not set" },
+  { value: "boy", label: "Boy" },
+  { value: "girl", label: "Girl" },
+  { value: "unknown", label: "Unknown" },
+] as const;
 
 export function PetsView({ initialPets, userId, me, partner }: Props) {
   const supabase = useMemo(() => createClient(), []);
@@ -160,10 +167,23 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
   const [name, setName] = useState("");
   const [birthday, setBirthday] = useState("");
   const [species, setSpecies] = useState(PET_TYPES[0].type);
+  const [gender, setGender] = useState("");
   const [artIndex, setArtIndex] = useState(0);
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showLookPicker, setShowLookPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -191,6 +211,7 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
       name: name.trim(),
       birthday: birthday || null,
       species: species || null,
+      gender: gender || null,
       art_index: artIndex,
       image_url: imageUrl,
     });
@@ -233,59 +254,93 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <PetPortrait
-            art={artIndex}
-            size={88}
-            rounded={18}
-            imageUrl={file ? URL.createObjectURL(file) : null}
-          />
-          <label
-            className="kz-chunky font-display inline-flex flex-1 cursor-pointer items-center justify-center gap-2"
-            style={{
-              background: `linear-gradient(180deg, ${PALETTE.sky}, ${shade(PALETTE.sky, -15)})`,
-              color: "#fff",
-              fontSize: 13,
-              padding: "10px 14px",
-            }}
-          >
-            <Upload size={14} strokeWidth={2.4} />
-            {file ? "Change photo" : "Upload photo (optional)"}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="hidden"
+          <div className="relative">
+            <PetPortrait
+              art={artIndex}
+              size={88}
+              rounded={18}
+              imageUrl={previewUrl}
             />
-          </label>
+            <button
+              type="button"
+              onClick={() => setShowLookPicker((open) => !open)}
+              aria-label="Edit pet icon"
+              className="absolute -bottom-2 -right-2 grid h-9 w-9 place-items-center rounded-full"
+              style={{
+                background: `linear-gradient(180deg, ${PALETTE.sun}, ${shade(PALETTE.sun, -15)})`,
+                border: `2px solid ${PALETTE.ink}`,
+                boxShadow: `0 2px 0 ${PALETTE.ink}`,
+                color: PALETTE.ink,
+              }}
+            >
+              <Pencil size={16} strokeWidth={2.8} />
+            </button>
+          </div>
+          <div>
+            <div className="font-display text-sm" style={{ color: PALETTE.ink }}>
+              PET ICON
+            </div>
+            <div className="text-sm font-semibold opacity-60" style={{ color: PALETTE.ink }}>
+              Tap the pencil to choose an emoji or photo.
+            </div>
+          </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {PET_TYPES.map((pt, i) => (
-            <button
-              key={pt.type}
-              type="button"
-              onClick={() => {
-                setArtIndex(i);
-                setSpecies(pt.type);
-              }}
-              className="grid place-items-center"
+        {showLookPicker && (
+          <div className="mt-3 rounded-3xl bg-white/75 p-3" style={{ border: `2px solid ${PALETTE.ink}` }}>
+            <div className="grid grid-cols-4 gap-2">
+              {PET_TYPES.map((pt, i) => (
+                <button
+                  key={pt.type}
+                  type="button"
+                  onClick={() => {
+                    setArtIndex(i);
+                    setSpecies(pt.type);
+                    setFile(null);
+                    setShowLookPicker(false);
+                  }}
+                  className="grid place-items-center"
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: 14,
+                    border: `2.5px solid ${PALETTE.ink}`,
+                    background: !file && artIndex === i
+                      ? `linear-gradient(180deg, ${pt.bColor}, ${pt.aColor})`
+                      : "#fff",
+                    boxShadow: !file && artIndex === i ? `0 3px 0 ${PALETTE.ink}` : `0 2px 0 ${PALETTE.ink}`,
+                    fontSize: 26,
+                    cursor: "pointer",
+                  }}
+                  aria-label={pt.type}
+                >
+                  {pt.face}
+                </button>
+              ))}
+            </div>
+            <label
+              className="kz-chunky font-display mt-3 inline-flex w-full cursor-pointer items-center justify-center gap-2"
               style={{
-                aspectRatio: "1",
-                borderRadius: 14,
-                border: `2.5px solid ${PALETTE.ink}`,
-                background: artIndex === i
-                  ? `linear-gradient(180deg, ${pt.bColor}, ${pt.aColor})`
-                  : "#fff",
-                boxShadow: artIndex === i ? `0 3px 0 ${PALETTE.ink}` : `0 2px 0 ${PALETTE.ink}`,
-                fontSize: 26,
-                cursor: "pointer",
+                background: `linear-gradient(180deg, ${PALETTE.sky}, ${shade(PALETTE.sky, -15)})`,
+                color: "#fff",
+                fontSize: 13,
+                padding: "10px 14px",
               }}
-              aria-label={pt.type}
             >
-              {pt.face}
-            </button>
-          ))}
-        </div>
+              <Upload size={14} strokeWidth={2.4} />
+              {file ? "Change photo" : "Upload photo"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const nextFile = e.target.files?.[0] ?? null;
+                  setFile(nextFile);
+                  if (nextFile) setShowLookPicker(false);
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
+        )}
 
         <div className="mt-3 flex flex-col gap-2">
           <Field label="Name">
@@ -315,6 +370,20 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
               className="font-body w-full bg-transparent outline-none"
               style={{ color: PALETTE.ink }}
             />
+          </Field>
+          <Field label="Gender">
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+              className="font-body w-full bg-transparent outline-none"
+              style={{ color: PALETTE.ink }}
+            >
+              {GENDER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </Field>
         </div>
 

@@ -11,66 +11,48 @@ const WOOD_DARK = "#6B3F12";
 const WOOD = "#A66A2C";
 const WOOD_LIGHT = "#C98C4D";
 
-function roundedRectPath(x: number, y: number, w: number, h: number, r: number) {
-  return [
-    `M ${x + r} ${y}`,
-    `H ${x + w - r}`,
-    `Q ${x + w} ${y} ${x + w} ${y + r}`,
-    `V ${y + h - r}`,
-    `Q ${x + w} ${y + h} ${x + w - r} ${y + h}`,
-    `H ${x + r}`,
-    `Q ${x} ${y + h} ${x} ${y + h - r}`,
-    `V ${y + r}`,
-    `Q ${x} ${y} ${x + r} ${y}`,
-    "Z",
-  ].join(" ");
-}
-
 function RopeRing() {
-  const W = 68;
-  const H = 30;
-  const inset = 6;
-  const outerPath = roundedRectPath(2, 2, W - 4, H - 4, H / 2 - 2);
-  const innerX = inset;
-  const innerY = inset;
-  const innerW = W - inset * 2;
-  const innerH = H - inset * 2;
-  const innerPath = roundedRectPath(innerX, innerY, innerW, innerH, innerH / 2);
-  const tickCount = 8;
+  const W = 46;
+  const H = 14;
+  const tickCount = 9;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}>
-      <path
-        d={`${outerPath} ${innerPath}`}
+      <rect
+        x={1.5}
+        y={1.5}
+        width={W - 3}
+        height={H - 3}
+        rx={5}
+        ry={5}
         fill={GOLD}
-        fillRule="evenodd"
         stroke={PALETTE.ink}
-        strokeWidth={2.5}
+        strokeWidth={2.2}
       />
       {Array.from({ length: tickCount }).map((_, i) => {
-        const x = innerX + ((i + 0.5) / tickCount) * innerW;
+        const x = 4 + i * 4.8;
         return (
           <path
             key={i}
-            d={`M ${x - 2} ${innerY + 2} Q ${x + 1.5} ${innerY + innerH / 2} ${x - 2} ${innerY + innerH - 2}`}
+            d={`M ${x + 4} 3 L ${x - 1} 11`}
             stroke={GOLD_DEEP}
-            strokeWidth={1.4}
+            strokeWidth={1.15}
             fill="none"
             strokeLinecap="round"
+            opacity={0.85}
           />
         );
       })}
       <path
-        d={roundedRectPath(4.5, 4.5, W - 9, H - 9, H / 2 - 4.5)}
+        d={`M 7 4 H ${W - 7}`}
         stroke={GOLD_PALE}
-        strokeWidth={1.2}
+        strokeWidth={1}
         strokeLinecap="round"
-        fill="none"
         opacity={0.9}
       />
       <path
-        d={`M ${innerX + 5} ${innerY + innerH - 1} H ${innerX + innerW - 5}`}
+        d={`M 7 ${H - 4} H ${W - 7}`}
         stroke={GOLD_DEEP}
-        strokeWidth={1}
+        strokeWidth={0.9}
         strokeLinecap="round"
         opacity={0.7}
       />

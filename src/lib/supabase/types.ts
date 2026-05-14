@@ -40,6 +40,7 @@ export type Database = {
           name: string;
           birthday: string | null;
           species: string | null;
+          gender: string | null;
           image_url: string | null;
           art_index: number;
           created_at: string;
@@ -50,6 +51,7 @@ export type Database = {
           name: string;
           birthday?: string | null;
           species?: string | null;
+          gender?: string | null;
           image_url?: string | null;
           art_index?: number;
         };
@@ -57,6 +59,7 @@ export type Database = {
           name?: string;
           birthday?: string | null;
           species?: string | null;
+          gender?: string | null;
           image_url?: string | null;
           art_index?: number;
         };

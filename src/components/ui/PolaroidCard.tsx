@@ -6,6 +6,14 @@ import { PALETTE } from "@/lib/utils";
 import { PetPortrait } from "./PetPortrait";
 import type { Pet } from "@/lib/supabase/types";
 
+function formatGender(gender: string | null) {
+  if (!gender) return null;
+  if (gender === "boy") return "Boy";
+  if (gender === "girl") return "Girl";
+  if (gender === "unknown") return "Unknown";
+  return gender;
+}
+
 export function PolaroidCard({
   pet,
   active,
@@ -15,6 +23,8 @@ export function PolaroidCard({
   active?: boolean;
   onClick?: () => void;
 }) {
+  const gender = formatGender(pet.gender);
+
   return (
     <button
       onClick={onClick}
@@ -56,6 +66,12 @@ export function PolaroidCard({
             <>
               <span className="h-[3px] w-[3px] rounded-full bg-current" />
               <span>{pet.species}</span>
+            </>
+          )}
+          {gender && (
+            <>
+              <span className="h-[3px] w-[3px] rounded-full bg-current" />
+              <span>{gender}</span>
             </>
           )}
         </div>
