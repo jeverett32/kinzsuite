@@ -23,7 +23,10 @@ export const metadata: Metadata = {
   description: "A cozy shared world for you, your partner, and your pets.",
   applicationName: "KinzSuite",
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/icon.webp", type: "image/webp", sizes: "512x512" },
+      { url: "/icon.png", type: "image/png", sizes: "512x512" },
+    ],
     apple: "/icon.png",
   },
   appleWebApp: {
