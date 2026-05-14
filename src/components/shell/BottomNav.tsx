@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckSquare, PawPrint, Heart, MessageCircle, type LucideIcon } from "lucide-react";
+import { CheckSquare, PawPrint, Heart, type LucideIcon } from "lucide-react";
 import { PALETTE, shade, type PaletteColor } from "@/lib/utils";
 
 type Tab = {
@@ -13,10 +13,9 @@ type Tab = {
 };
 
 const TABS: Tab[] = [
-  { href: "/",      label: "Today", icon: CheckSquare,    tone: "grass" },
-  { href: "/pets",  label: "Pets",  icon: PawPrint,       tone: "sky" },
-  { href: "/date",  label: "Date",  icon: Heart,          tone: "blush" },
-  { href: "/chat",  label: "Chat",  icon: MessageCircle,  tone: "purple" },
+  { href: "/",      label: "Today", icon: CheckSquare, tone: "grass" },
+  { href: "/pets",  label: "Pets",  icon: PawPrint,    tone: "sky" },
+  { href: "/date",  label: "Date",  icon: Heart,       tone: "blush" },
 ];
 
 export function BottomNav() {
@@ -24,7 +23,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="sticky bottom-0 z-40 flex justify-around gap-1 px-2.5 pt-2.5 pb-[max(env(safe-area-inset-bottom),18px)]"
+      className="z-40 flex flex-shrink-0 justify-around gap-1 px-2.5 pt-2.5 pb-[max(env(safe-area-inset-bottom),14px)]"
       style={{
         background: "rgba(255,255,255,0.85)",
         backdropFilter: "blur(20px) saturate(180%)",
