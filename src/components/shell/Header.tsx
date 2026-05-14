@@ -60,17 +60,20 @@ export function Header({
             <button
               type="button"
               onClick={() => router.back()}
-              aria-label="Back"
-              className="kz-chunky font-display grid place-items-center"
+              className="kz-chunky font-display inline-flex items-center justify-center gap-0"
               style={{
-                width: 40,
                 height: 40,
-                padding: 0,
+                paddingLeft: 6,
+                paddingRight: 14,
+                paddingTop: 0,
+                paddingBottom: 0,
                 background: "#fff",
                 color: PALETTE.ink,
+                borderRadius: 999,
               }}
             >
-              <ChevronLeft size={22} strokeWidth={2.6} />
+              <ChevronLeft size={22} strokeWidth={2.6} className="-mr-0.5 shrink-0" />
+              <span className="text-[13px] font-semibold leading-none tracking-wide">Back</span>
             </button>
           ) : (
             <>
