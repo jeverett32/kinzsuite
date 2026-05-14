@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { createClient } from "@/lib/supabase/client";
+import { WHEEL_SLICE_COUNT } from "@/lib/quests";
 import type { AccentColor, DailyTask, WheelQuest } from "@/lib/supabase/types";
 import { PALETTE, shade } from "@/lib/utils";
 
@@ -121,6 +122,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
 
   async function saveQuestFromDraft(d: WheelQuest) {
     setErr(null);
+    const sort_order = Math.max(0, Math.min(WHEEL_SLICE_COUNT - 1, d.sort_order));
     const { error } = await supabase
       .from("wheel_quests")
       .update({
@@ -128,7 +130,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
         title: d.title,
         detail: d.detail,
         accent: d.accent,
-        sort_order: d.sort_order,
+        sort_order,
       })
       .eq("id", d.id);
     if (error) {
@@ -137,51 +139,10 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
     }
     setQuests((cur) =>
       cur
-        .map((q) => (q.id === d.id ? { ...d } : q))
+        .map((q) => (q.id === d.id ? { ...d, sort_order } : q))
         .sort((a, b) => a.sort_order - b.sort_order),
     );
     setQuestDraft(null);
-  }
-
-  async function deleteQuestRow(q: WheelQuest) {
-    if (quests.length <= 1) {
-      flashErr(new Error("Keep at least one wheel quest."));
-      return;
-    }
-    setErr(null);
-    const { error } = await supabase.from("wheel_quests").delete().eq("id", q.id);
-    if (error) {
-      flashErr(error);
-      return;
-    }
-    setQuests((cur) => cur.filter((x) => x.id !== q.id));
-    setQuestDraft((d) => (d?.id === q.id ? null : d));
-  }
-
-  async function addQuest() {
-    setErr(null);
-    setAdding(true);
-    const maxSort = quests.reduce((m, q) => Math.max(m, q.sort_order), -1);
-    const { data, error } = await supabase
-      .from("wheel_quests")
-      .insert({
-        tag: "New",
-        title: "New date quest",
-        detail: "Describe what to do together.",
-        accent: "blush",
-        sort_order: maxSort + 1,
-      })
-      .select("*")
-      .single();
-    setAdding(false);
-    if (error) {
-      flashErr(error);
-      return;
-    }
-    if (data) {
-      setQuests((cur) => [...cur, data].sort((a, b) => a.sort_order - b.sort_order));
-      setQuestDraft({ ...data });
-    }
   }
 
   return (
@@ -211,7 +172,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       <p className="font-hand mt-1 text-base text-white" style={{ textShadow: `0 2px 0 ${PALETTE.ink}` }}>
         {tab === "tasks"
           ? "Your daily checklist — only you can edit yours."
-          : "Date wheel quests — shared by both of you."}
+          : `The date wheel always has ${WHEEL_SLICE_COUNT} slices — edit the quests, don’t add or remove them.`}
       </p>
 
       {err && (
@@ -251,8 +212,8 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
         })}
       </div>
 
-      <div className="mt-3 flex justify-end">
-        {tab === "tasks" ? (
+      {tab === "tasks" && (
+        <div className="mt-3 flex justify-end">
           <ChunkyButton
             type="button"
             color="grass"
@@ -263,19 +224,22 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
           >
             {adding ? "Adding…" : "Add task"}
           </ChunkyButton>
-        ) : (
-          <ChunkyButton
-            type="button"
-            color="sky"
-            size="sm"
-            disabled={adding}
-            icon={<Plus size={14} />}
-            onClick={() => void addQuest()}
-          >
-            {adding ? "Adding…" : "Add quest"}
-          </ChunkyButton>
-        )}
-      </div>
+        </div>
+      )}
+
+      {tab === "quests" && quests.length !== WHEEL_SLICE_COUNT && (
+        <div
+          className="mt-3 rounded-2xl border-2 px-3 py-2 font-hand text-sm"
+          style={{
+            borderColor: PALETTE.sun,
+            background: "rgba(255, 249, 220, 0.95)",
+            color: PALETTE.ink,
+          }}
+        >
+          Expected exactly {WHEEL_SLICE_COUNT} wheel quests (one per slice). This database has{" "}
+          {quests.length}. Restore from backup or re-run migrations so the wheel stays in sync.
+        </div>
+      )}
 
       <div
         className="kz-sticker mt-3 rounded-3xl p-1"
@@ -329,25 +293,29 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
           <ul>
             {quests.length === 0 && (
               <li className="px-3 py-8 text-center font-hand text-sm" style={{ color: PALETTE.ink, opacity: 0.6 }}>
-                No quests — run the latest database migration, or tap Add quest.
+                No wheel quests in the database — run the latest Supabase migrations.
               </li>
             )}
-            {quests.map((q) => (
+            {quests.map((q, sliceIdx) => (
               <li
                 key={q.id}
                 className="flex items-center gap-2 border-t-2 border-dashed px-3 py-2.5 first:border-t-0"
                 style={{ borderColor: `${PALETTE.ink}18` }}
               >
                 <div
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-bold text-white"
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display text-xs text-white"
                   style={{
                     background: `linear-gradient(180deg, ${PALETTE[q.accent]}, ${shade(PALETTE[q.accent], -12)})`,
                     border: `2px solid ${PALETTE.ink}`,
+                    boxShadow: `0 2px 0 ${PALETTE.ink}`,
                   }}
                 >
-                  {q.tag.slice(0, 2).toUpperCase()}
+                  {sliceIdx + 1}
                 </div>
                 <div className="min-w-0 flex-1">
+                  <div className="font-display text-[10px] tracking-wider opacity-55" style={{ color: PALETTE.ink }}>
+                    SLICE {sliceIdx + 1} / {WHEEL_SLICE_COUNT}
+                  </div>
                   <div className="truncate font-semibold" style={{ color: PALETTE.ink }}>
                     {q.title}
                   </div>
@@ -486,8 +454,13 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-2">
-              <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
-                Edit quest
+              <div>
+                <div className="font-display text-lg" style={{ color: PALETTE.ink }}>
+                  Edit wheel slice
+                </div>
+                <div className="font-hand text-sm opacity-70" style={{ color: PALETTE.ink }}>
+                  {WHEEL_SLICE_COUNT} slices total — text & colors only.
+                </div>
               </div>
               <button
                 type="button"
@@ -552,14 +525,21 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
                 />
               </label>
               <label className="block sm:col-span-2">
-                <span className="font-display text-[10px] tracking-wider opacity-60">ORDER</span>
+                <span className="font-display text-[10px] tracking-wider opacity-60">
+                  SLICE ORDER (0–{WHEEL_SLICE_COUNT - 1}, clockwise)
+                </span>
                 <input
                   type="number"
+                  min={0}
+                  max={WHEEL_SLICE_COUNT - 1}
                   value={questDraft.sort_order}
                   onChange={(e) =>
                     setQuestDraft({
                       ...questDraft,
-                      sort_order: Math.max(0, Number(e.target.value) || 0),
+                      sort_order: Math.max(
+                        0,
+                        Math.min(WHEEL_SLICE_COUNT - 1, Number(e.target.value) || 0),
+                      ),
                     })
                   }
                   className="mt-1 w-full rounded-xl border-2 bg-white px-3 py-2 font-body text-sm outline-none"
@@ -571,15 +551,6 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
             <div className="mt-4 flex flex-col gap-2">
               <ChunkyButton type="button" color="blush" full onClick={() => void saveQuestFromDraft(questDraft)}>
                 Save
-              </ChunkyButton>
-              <ChunkyButton
-                type="button"
-                color="white"
-                full
-                icon={<Trash2 size={16} />}
-                onClick={() => void deleteQuestRow(questDraft)}
-              >
-                Delete
               </ChunkyButton>
             </div>
           </div>

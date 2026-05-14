@@ -20,3 +20,6 @@ export const STATIC_QUESTS_FALLBACK: Quest[] = [
   { tag: "Quest", title: "Trade three pet outfits with each other", detail: "Style your partner's pet for tomorrow.", accent: "grass" },
   { tag: "Travel", title: "Plan a 24-hr surprise trip on paper", detail: "Reveal at breakfast on Saturday.", accent: "sky" },
 ];
+
+/** Wheel uses one slice per quest row; keep this many rows in the database. */
+export const WHEEL_SLICE_COUNT = STATIC_QUESTS_FALLBACK.length;
