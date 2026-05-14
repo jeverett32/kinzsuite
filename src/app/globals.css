@@ -8,11 +8,15 @@
 
 html,
 body {
-  height: 100%;
-  background: #62cdf1;
+  min-height: 100dvh;
+  background: #3fb8e8;
   color: #13294b;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+}
+
+body {
+  overflow-x: hidden;
 }
 
 /* Hide scrollbar but keep scroll behavior */

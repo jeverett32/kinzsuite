@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       className={`${fredoka.variable} ${lilita.variable} ${caveat.variable}`}
     >
-      <body className="font-body min-h-screen">{children}</body>
+      <body className="font-body min-h-[100dvh]">{children}</body>
     </html>
   );
 }
