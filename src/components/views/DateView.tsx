@@ -106,17 +106,15 @@ function Wheel({
     );
   }
 
-  const WHEEL_TOP = 20;
-  const PLAT_W = SIZE + 40;
-  const PLAT_H = 90;
-  const PLAT_INSET = 32;
-  const PLAT_TOP_DEPTH = 22;
-  const PLAT_TOP_Y = WHEEL_TOP + SIZE - 24;
-  const SPIN_SIZE = 64;
-  const SPIN_STAND_W = 100;
-  const SPIN_STAND_H = 28;
-  const OUTER_W = SIZE + 60;
-  const OUTER_H = PLAT_TOP_Y + PLAT_H + SPIN_STAND_H + 14;
+  const WHEEL_TOP = 18;
+  const PLAT_W = SIZE + 60;
+  const PLAT_H = 46;
+  const PLAT_INSET = 34;
+  const PLAT_TOP_DEPTH = 14;
+  const PLAT_TOP_Y = WHEEL_TOP + SIZE - 12;
+  const SPIN_SIZE = 54;
+  const OUTER_W = PLAT_W + 20;
+  const OUTER_H = PLAT_TOP_Y + PLAT_H + 6;
 
   return (
     <div className="relative mx-auto" style={{ width: OUTER_W, height: OUTER_H }}>
@@ -130,7 +128,7 @@ function Wheel({
           left: "50%",
           marginLeft: -PLAT_W / 2,
           zIndex: 1,
-          filter: `drop-shadow(0 6px 0 rgba(0,0,0,0.25))`,
+          filter: `drop-shadow(0 5px 0 rgba(0,0,0,0.25))`,
         }}
       >
         <path
@@ -153,8 +151,8 @@ function Wheel({
         className="absolute left-1/2 -translate-x-1/2"
         style={{
           top: WHEEL_TOP - 18,
-          width: 22,
-          height: 30,
+          width: 18,
+          height: 28,
           background: STAGE_BLUE_LIGHT,
           border: `3px solid ${PALETTE.ink}`,
           borderRadius: 4,
@@ -265,33 +263,21 @@ function Wheel({
         </text>
       </svg>
 
-      <div
-        className="absolute left-1/2 -translate-x-1/2"
-        style={{
-          top: PLAT_TOP_Y + PLAT_H - 6,
-          width: SPIN_STAND_W,
-          height: SPIN_STAND_H,
-          background: `linear-gradient(180deg, ${STAGE_BLUE} 0%, ${STAGE_BLUE_DEEP} 100%)`,
-          border: `3px solid ${PALETTE.ink}`,
-          borderRadius: 10,
-          zIndex: 4,
-        }}
-      />
       <button
         onClick={spin}
         disabled={spinning}
         aria-label="Spin the wheel"
         className="font-display absolute left-1/2 -translate-x-1/2"
         style={{
-          top: PLAT_TOP_Y + PLAT_H - 6 - SPIN_SIZE + 18,
+          top: PLAT_TOP_Y + PLAT_TOP_DEPTH - SPIN_SIZE + 4,
           width: SPIN_SIZE,
           height: SPIN_SIZE,
           borderRadius: 999,
           background: `radial-gradient(circle at 32% 28%, #ff9595 0%, ${HUB_RED} 50%, ${HUB_RED_DARK} 100%)`,
           border: `3px solid ${PALETTE.ink}`,
-          boxShadow: `0 6px 0 ${PALETTE.ink}, inset 0 -8px 0 -3px rgba(0,0,0,0.32), inset 0 7px 0 -3px rgba(255,255,255,0.45)`,
+          boxShadow: `0 5px 0 ${PALETTE.ink}, inset 0 -7px 0 -3px rgba(0,0,0,0.32), inset 0 6px 0 -3px rgba(255,255,255,0.45)`,
           color: "#fff",
-          fontSize: 16,
+          fontSize: 14,
           letterSpacing: 1.5,
           textShadow: "0 2px 0 rgba(0,0,0,0.5)",
           cursor: spinning ? "wait" : "pointer",
@@ -448,16 +434,19 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
   }
 
   return (
-    <div className="relative min-h-full px-4 pb-6 pt-1">
-      <div className="pointer-events-none absolute inset-0 -mx-4">
+    <div className="px-4 pb-6 pt-1">
+      <div
+        className="relative w-full overflow-hidden rounded-2xl"
+        style={{ aspectRatio: "5 / 4", border: `3px solid ${PALETTE.ink}` }}
+      >
         <StageBackground />
-      </div>
-      <div className="relative pb-3.5 pt-3">
-        <Wheel quests={quests} onLand={setQuestIdx} alignSliceIndex={alignSliceIndex} />
+        <div className="absolute inset-x-0 bottom-1 flex justify-center">
+          <Wheel quests={quests} onLand={setQuestIdx} alignSliceIndex={alignSliceIndex} />
+        </div>
       </div>
 
       <div
-        className="kz-sticker mt-2 rounded-[22px] p-4"
+        className="kz-sticker relative mt-3 rounded-[22px] p-4"
         style={{ ["--ink" as never]: PALETTE.ink }}
       >
         <div className="mb-1.5 flex items-center justify-between">
