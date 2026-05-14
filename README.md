@@ -9,7 +9,7 @@ Features:
 - **Pets** — polaroid-style gallery; upload photos, pick from 8 cute species
 - **Date** — spin the wheel to pick tonight's adventure
 - **Chat** — realtime messaging with image attachments
-- Magic-link sign-in via Supabase Auth
+- Email + password sign-in via Supabase Auth, hard-capped at 2 users
 
 ---
 
@@ -54,33 +54,49 @@ below: paste, click **Run**, in this order:
 
 1. `supabase/migrations/0001_init.sql` — tables, RLS, realtime, seed data
 2. `supabase/migrations/0002_storage.sql` — pets + chat-images buckets and policies
+3. `supabase/migrations/0003_two_user_limit.sql` — hard-cap `auth.users` at 2 rows
 
-Both scripts are idempotent — safe to re-run.
+All scripts are idempotent — safe to re-run.
 
-### 2c. Configure Auth
+### 2c. Configure Auth (lock it down)
 
-1. **Authentication → Providers → Email** is on by default — keep it on. Magic
-   links work out of the box.
-2. **Authentication → URL Configuration**:
+This app is private — only you and your partner should be able to sign in.
+
+1. **Authentication → Providers → Email**:
+   - Provider enabled: **on**
+   - **Confirm email**: **off** (you don't want to deal with confirmation
+     emails for two known accounts)
+   - Save
+2. **Authentication → Settings**:
+   - **Allow new users to sign up**: **off** (prevents anyone from creating
+     accounts via the public API)
+   - Save
+3. **Authentication → URL Configuration**:
    - **Site URL**: `http://localhost:3000` for dev, `https://YOUR-APP.vercel.app` in prod
-   - **Redirect URLs**: add both
-     - `http://localhost:3000/auth/callback`
-     - `https://YOUR-APP.vercel.app/auth/callback`
-3. (Optional but recommended) **Authentication → Email Templates → Magic Link**:
-   change the subject/body to something cuter — anything you write will be sent
-   to you and your girlfriend.
+4. **(No need to set up SMTP or email templates** — with confirmations off and
+   magic links unused, the app doesn't send any auth emails. The only emails
+   you'd ever need are password resets, and you can do those yourself from
+   the Authentication → Users page.)
 
-### 2d. Invite your partner
+### 2d. Create the two accounts manually
 
-There's no public sign-up flow inside the app — both of you just request a
-magic link from `/login`. The first time either of you enters your email,
-Supabase creates an auth user and the database trigger creates a matching
-`profiles` row. You can rename yourselves later by updating
-`profiles.display_name` (next step).
+Go to **Authentication → Users → Add User** and create two users, one for each
+of you:
 
-### 2e. Set display names
+| Field            | Value                                |
+|------------------|--------------------------------------|
+| Email            | `you@example.com`                    |
+| Password         | something memorable                  |
+| Auto Confirm User| **on** (so they can log in instantly)|
 
-Run this in the SQL editor (replace the emails):
+Repeat for your partner. The DB trigger from `0001_init.sql` automatically
+creates a matching `profiles` row for each user, and `0003_two_user_limit.sql`
+will reject any attempt to create a third user.
+
+### 2e. (Optional) Pre-set display names
+
+You can also do this in-app via the user icon → profile, but if you want them
+set from the start:
 
 ```sql
 update public.profiles
