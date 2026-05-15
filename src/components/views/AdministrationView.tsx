@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CopyCodeButton } from "@/components/onboarding/CopyCodeButton";
 import Link from "next/link";
 import { ArrowLeft, Bell, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
@@ -30,11 +31,19 @@ type Props = {
   initialQuests: WheelQuest[];
   initialGroups: Group[];
   activeGroupId: string | null;
+  groupRoles: Record<string, "owner" | "member">;
 };
 
 type Tab = "tasks" | "quests" | "groups" | "notifications";
 
-export function AdministrationView({ userId, initialTasks, initialQuests, initialGroups, activeGroupId: initialActiveGroupId }: Props) {
+export function AdministrationView({
+  userId,
+  initialTasks,
+  initialQuests,
+  initialGroups,
+  activeGroupId: initialActiveGroupId,
+  groupRoles: initialGroupRoles,
+}: Props) {
   const supabase = useMemo(() => createClient(), []);
   const today = todayIso();
 
@@ -53,8 +62,12 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
   const [activeGroupId, setActiveGroupId] = useState<string | null>(initialActiveGroupId);
   const [newGroupName, setNewGroupName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [groupRoles, setGroupRoles] = useState(initialGroupRoles);
   const [groupBusy, setGroupBusy] = useState(false);
   const [groupStatus, setGroupStatus] = useState<string | null>(null);
+  const [shareInviteCode, setShareInviteCode] = useState<string | null>(null);
+  const [shareInviteError, setShareInviteError] = useState<string | null>(null);
+  const [shareInviteLoading, setShareInviteLoading] = useState(false);
 
   const [err, setErr] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -74,7 +87,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
     const [{ data: memberships }, { data: profile }] = await Promise.all([
       supabase
         .from("group_members")
-        .select("group_id, sort_order")
+        .select("group_id, sort_order, role")
         .eq("user_id", userId)
         .order("sort_order", { ascending: true }),
       supabase.from("profiles").select("active_group_id").eq("id", userId).maybeSingle(),
@@ -83,14 +96,41 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
     const { data: groupRows } = ids.length
       ? await supabase.from("groups").select("*").in("id", ids)
       : { data: [] as Group[] };
-    
-    // Sort groupRows according to memberships sort_order
-    const groupMap = new Map((groupRows ?? []).map(g => [g.id, g]));
-    const sortedGroups = ids.map(id => groupMap.get(id)).filter((g): g is Group => !!g);
-    
+
+    const groupMap = new Map((groupRows ?? []).map((g) => [g.id, g]));
+    const sortedGroups = ids.map((id) => groupMap.get(id)).filter((g): g is Group => !!g);
+    const roles = Object.fromEntries(
+      (memberships ?? []).map((row) => [row.group_id, row.role as "owner" | "member"]),
+    );
+
     setGroups(sortedGroups);
+    setGroupRoles(roles);
     setActiveGroupId(profile?.active_group_id ?? null);
   }, [supabase, userId]);
+
+  const loadShareInvite = useCallback(async () => {
+    if (!activeGroupId) {
+      setShareInviteCode(null);
+      setShareInviteError(null);
+      return;
+    }
+    setShareInviteLoading(true);
+    setShareInviteError(null);
+    const { data, error } = await supabase.rpc("get_or_create_group_invite", {
+      p_group_id: activeGroupId,
+    });
+    setShareInviteLoading(false);
+    if (error) {
+      setShareInviteCode(null);
+      setShareInviteError(error.message);
+      return;
+    }
+    setShareInviteCode(data ?? null);
+  }, [supabase, activeGroupId]);
+
+  useEffect(() => {
+    if (tab === "groups") void loadShareInvite();
+  }, [tab, loadShareInvite]);
 
   async function switchGroup(groupId: string | null) {
     setGroupBusy(true);
@@ -119,10 +159,10 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
       setGroupStatus(error.message);
       return;
     }
-    const invite = data?.[0]?.invite_code;
-    setGroupStatus(invite ? `Invite code: ${invite}` : "Group created");
+    setGroupStatus("Group created");
     setNewGroupName("");
     await loadGroups();
+    window.location.reload();
   }
 
   async function joinGroup() {
@@ -137,6 +177,27 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
     }
     setInviteCode("");
     await loadGroups();
+    window.location.reload();
+  }
+
+  async function deleteGroup(groupId: string) {
+    const group = groups.find((g) => g.id === groupId);
+    const label = group?.name ?? "this group";
+    if (
+      !window.confirm(
+        `Delete "${label}" for everyone? All members will return to solo mode. This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setGroupBusy(true);
+    setGroupStatus(null);
+    const { error } = await supabase.rpc("delete_group", { p_group_id: groupId });
+    setGroupBusy(false);
+    if (error) {
+      setGroupStatus(error.message);
+      return;
+    }
     window.location.reload();
   }
 
@@ -295,15 +356,6 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
       >
         ADMINISTRATION
       </div>
-      <p className="font-hand mt-1 text-base text-white" style={{ textShadow: `0 2px 0 ${PALETTE.ink}` }}>
-        {tab === "tasks"
-          ? "Your daily checklist — only you can edit yours."
-          : tab === "quests"
-          ? `The date wheel always has ${WHEEL_SLICE_COUNT} slices — edit the quests, don’t add or remove them.`
-          : tab === "groups"
-          ? "Manage your family groups here."
-          : "Notification settings and tests."}
-      </p>
 
       {err && (
         <div className="mt-3 rounded-2xl border-2 border-red-500 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
@@ -489,7 +541,10 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
             <div className="font-display text-xs tracking-wider opacity-60">MY GROUPS</div>
             <div className="mt-3 flex flex-col gap-2">
               {groups.length === 0 && (
-                <p className="font-hand text-sm opacity-60">You aren&apos;t in any groups yet.</p>
+                <p className="font-hand text-sm opacity-60">
+                  You&apos;re on your own for now. Create a group to share tasks and chat, or join with an invite code
+                  below.
+                </p>
               )}
               {groups.map((group) => (
                 <button
@@ -510,6 +565,29 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
                 </button>
               ))}
             </div>
+
+            {activeGroupId && (
+              <div className="mt-6 border-t-2 border-dashed pt-4" style={{ borderColor: `${PALETTE.ink}15` }}>
+                <div className="font-display text-xs tracking-wider opacity-60">INVITE CODE</div>
+                <p className="font-hand mt-1 text-sm opacity-60">Share this code so others can join your active group.</p>
+                {shareInviteLoading && (
+                  <p className="font-hand mt-2 text-sm opacity-60">Loading invite code…</p>
+                )}
+                {!shareInviteLoading && shareInviteCode && (
+                  <div className="mt-3 rounded-2xl bg-white px-4 py-3" style={{ border: `2px solid ${PALETTE.ink}`, boxShadow: `0 2px 0 ${PALETTE.ink}` }}>
+                    <div className="font-display text-2xl tracking-wide" style={{ color: PALETTE.ink }}>
+                      {shareInviteCode}
+                    </div>
+                    <div className="mt-2">
+                      <CopyCodeButton code={shareInviteCode} />
+                    </div>
+                  </div>
+                )}
+                {!shareInviteLoading && shareInviteError && (
+                  <p className="mt-2 text-sm font-semibold text-red-600">{shareInviteError}</p>
+                )}
+              </div>
+            )}
 
             <div className="mt-6">
               <div className="font-display text-xs tracking-wider opacity-60">CREATE OR JOIN</div>
@@ -549,17 +627,45 @@ export function AdministrationView({ userId, initialTasks, initialQuests, initia
             </div>
 
             {groups.length > 0 && (
-              <div className="mt-6 border-t-2 border-dashed pt-4" style={{ borderColor: `${PALETTE.ink}15` }}>
-                <ChunkyButton
-                  type="button"
-                  color="white"
-                  size="sm"
-                  full
-                  disabled={groupBusy || !activeGroupId}
-                  onClick={() => activeGroupId && void leaveGroup(activeGroupId)}
-                >
-                  Leave active group
-                </ChunkyButton>
+              <div className="mt-6 flex flex-col gap-2 border-t-2 border-dashed pt-4" style={{ borderColor: `${PALETTE.ink}15` }}>
+                {activeGroupId && (
+                  <ChunkyButton
+                    type="button"
+                    color="white"
+                    size="sm"
+                    full
+                    disabled={groupBusy}
+                    onClick={() => void switchGroup(null)}
+                  >
+                    Use solo mode
+                  </ChunkyButton>
+                )}
+                {activeGroupId && groupRoles[activeGroupId] === "owner" ? (
+                  <ChunkyButton
+                    type="button"
+                    color="sun"
+                    size="sm"
+                    full
+                    disabled={groupBusy}
+                    icon={<Trash2 size={14} />}
+                    onClick={() => void deleteGroup(activeGroupId)}
+                  >
+                    Delete active group
+                  </ChunkyButton>
+                ) : (
+                  activeGroupId && (
+                    <ChunkyButton
+                      type="button"
+                      color="white"
+                      size="sm"
+                      full
+                      disabled={groupBusy}
+                      onClick={() => void leaveGroup(activeGroupId)}
+                    >
+                      Leave active group
+                    </ChunkyButton>
+                  )
+                )}
               </div>
             )}
             {groupStatus && (

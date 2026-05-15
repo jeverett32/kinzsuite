@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock, UserPlus, LogIn, KeyRound } from "lucide-react";
+import { Mail, Lock, UserPlus } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { SkyBackground } from "@/components/ui/SkyBackground";
 import { Logo } from "@/components/ui/Logo";
@@ -17,8 +17,6 @@ function LoginInner() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [groupName, setGroupName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +43,8 @@ function LoginInner() {
     }
 
     const redirectUrl = new URL("/auth/callback", window.location.origin);
-    redirectUrl.searchParams.set("next", "/onboarding");
+    redirectUrl.searchParams.set("next", "/");
     redirectUrl.searchParams.set("mode", "create-account");
-    if (groupName.trim()) redirectUrl.searchParams.set("groupName", groupName.trim());
-    if (inviteCode.trim()) redirectUrl.searchParams.set("invite", inviteCode.trim());
 
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -65,7 +61,7 @@ function LoginInner() {
       setError("That didn't work. Check your details and try again.");
       return;
     }
-    router.replace(`/login?next=${encodeURIComponent("/onboarding")}`);
+    router.replace(`/login?next=${encodeURIComponent("/")}`);
   }
 
   return (
@@ -162,75 +158,37 @@ function LoginInner() {
           </label>
 
           {mode === "create-account" && (
-            <>
-              <label className="block">
-                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
-                  DISPLAY NAME
-                </div>
-                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
-                  <UserPlus size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
-                  <input
-                    type="text"
-                    required
-                    autoComplete="nickname"
-                    placeholder="Jess"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="font-body flex-1 bg-transparent text-base outline-none"
-                    style={{ color: PALETTE.ink }}
-                  />
-                </div>
-              </label>
-              <label className="block">
-                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
-                  GROUP NAME
-                </div>
-                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
-                  <LogIn size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
-                  <input
-                    type="text"
-                    placeholder="Jess & Cam"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    className="font-body flex-1 bg-transparent text-base outline-none"
-                    style={{ color: PALETTE.ink }}
-                  />
-                </div>
-              </label>
-              <label className="block">
-                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
-                  INVITE CODE (optional)
-                </div>
-                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
-                  <KeyRound size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
-                  <input
-                    type="text"
-                    placeholder="ABC123..."
-                    value={inviteCode}
-                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                    className="font-body flex-1 bg-transparent text-base outline-none"
-                    style={{ color: PALETTE.ink }}
-                  />
-                </div>
-              </label>
-            </>
+            <label className="block">
+              <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+                DISPLAY NAME
+              </div>
+              <div
+                className="flex items-center gap-2 rounded-full bg-white px-3 py-2"
+                style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}
+              >
+                <UserPlus size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
+                <input
+                  type="text"
+                  required
+                  autoComplete="nickname"
+                  placeholder="Jess"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="font-body flex-1 bg-transparent text-base outline-none"
+                  style={{ color: PALETTE.ink }}
+                />
+              </div>
+            </label>
           )}
 
           <ChunkyButton type="submit" color="blush" full disabled={busy}>
             {busy ? (mode === "sign-in" ? "Signing in…" : "Creating…") : mode === "sign-in" ? "Sign in" : "Create account"}
           </ChunkyButton>
 
-          {error && (
-            <p className="text-sm font-semibold text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
 
-          <p
-            className="font-hand mt-1 text-center text-base"
-            style={{ color: PALETTE.ink, opacity: 0.5 }}
-          >
-            {mode === "sign-in"
-              ? "use your existing account to sign in"
-              : "we'll set up your group after email verification"}
+          <p className="font-hand mt-1 text-center text-base" style={{ color: PALETTE.ink, opacity: 0.5 }}>
+            {mode === "sign-in" ? "use your existing account to sign in" : "confirm your email, then you're in"}
           </p>
         </form>
       </div>

@@ -13,6 +13,13 @@ export default async function AdministrationPage() {
   ]);
   const userId = profile?.id ?? (await supabase.auth.getSession()).data.session!.user.id;
   const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
+  const { data: memberships } = await supabase
+    .from("group_members")
+    .select("group_id, role")
+    .eq("user_id", userId);
+  const groupRoles = Object.fromEntries(
+    (memberships ?? []).map((row) => [row.group_id, row.role as "owner" | "member"]),
+  );
   const tasksQuery = activeGroupId
     ? supabase.from("daily_tasks").select("*").eq("group_id", activeGroupId).order("sort_order")
     : supabase.from("daily_tasks").select("*").is("group_id", null).eq("user_id", userId).order("sort_order");
@@ -28,6 +35,7 @@ export default async function AdministrationPage() {
       initialQuests={quests ?? []}
       initialGroups={initialGroups}
       activeGroupId={activeGroupId}
+      groupRoles={groupRoles}
     />
   );
 }

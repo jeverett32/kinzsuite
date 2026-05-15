@@ -357,6 +357,14 @@ export type Database = {
         Args: { p_group_id: string };
         Returns: string | null;
       };
+      delete_group: {
+        Args: { p_group_id: string };
+        Returns: undefined;
+      };
+      get_or_create_group_invite: {
+        Args: { p_group_id: string };
+        Returns: string;
+      };
       backfill_legacy_group: {
         Args: {
           p_group_name: string;
