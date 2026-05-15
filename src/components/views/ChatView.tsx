@@ -24,6 +24,14 @@ const PAGE_SIZE = 30;
 const REACTION_EMOJI = ["❤️", "😂", "😮", "😢", "👍", "🔥", "💀"] as const;
 const DEFAULT_REACTION = "❤️";
 const EMPTY_REACTIONS: MessageReaction[] = [];
+const PICKER_EST_W = 292;
+const PICKER_EST_H = 48;
+
+type PickerState = {
+  messageId: string;
+  anchor: DOMRect;
+  isMe: boolean;
+};
 
 export function ChatView({ initialMessages, initialReactions, userId, profiles }: Props) {
   const supabase = useMemo(() => createClient(), []);
@@ -43,26 +51,30 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(initialMessages.length >= PAGE_SIZE);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [pickerForId, setPickerForId] = useState<string | null>(null);
+  const [picker, setPicker] = useState<PickerState | null>(null);
+  const bubbleRefs = useRef<Map<string, HTMLElement>>(new Map());
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!pickerForId) return;
-    const close = (e: PointerEvent) => {
-      const t = e.target as HTMLElement;
-      if (t.closest("[data-reaction-picker]")) return;
-      if (t.closest(`[data-chat-bubble="${pickerForId}"]`)) return;
-      setPickerForId(null);
-    };
-    const id = window.setTimeout(() => {
-      document.addEventListener("pointerdown", close, true);
-    }, 0);
-    return () => {
-      clearTimeout(id);
-      document.removeEventListener("pointerdown", close, true);
-    };
-  }, [pickerForId]);
+  const registerBubbleRef = useCallback((id: string, el: HTMLElement | null) => {
+    if (el) bubbleRefs.current.set(id, el);
+    else bubbleRefs.current.delete(id);
+  }, []);
+
+  const openReactionPicker = useCallback(
+    (messageId: string) => {
+      const el = bubbleRefs.current.get(messageId);
+      if (!el) return;
+      const msg = messages.find((m) => m.id === messageId);
+      window.getSelection()?.removeAllRanges();
+      setPicker({
+        messageId,
+        anchor: el.getBoundingClientRect(),
+        isMe: msg?.sender_id === userId,
+      });
+    },
+    [messages, userId],
+  );
 
   const partner = useMemo(() => profiles.find((p) => p.id !== userId), [profiles, userId]);
   const partnerName = partner?.display_name || "Partner";
@@ -301,12 +313,8 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
                 reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
                 myUserId={userId}
                 onReact={(id, emoji) => void toggleReaction(id, emoji)}
-                pickerOpen={pickerForId === m.id}
-                onOpenPicker={setPickerForId}
-                onPickReaction={(emoji) => {
-                  void toggleReaction(m.id, emoji);
-                  setPickerForId(null);
-                }}
+                registerBubbleRef={registerBubbleRef}
+                onOpenPicker={openReactionPicker}
               />
             );
           })}
@@ -345,49 +353,134 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
       {lightboxUrl && (
         <ChatImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
       )}
+
+      {picker && (
+        <ReactionPickerOverlay
+          anchor={picker.anchor}
+          isMe={picker.isMe}
+          onPick={(emoji) => {
+            void toggleReaction(picker.messageId, emoji);
+            setPicker(null);
+          }}
+          onClose={() => setPicker(null)}
+        />
+      )}
     </div>
   );
 }
 
-function ReactionPicker({ onPick, isMe }: { onPick: (emoji: string) => void; isMe: boolean }) {
-  return (
-    <div
-      data-reaction-picker
-      role="toolbar"
-      aria-label="Pick reaction"
-      className="flex gap-0.5 rounded-full bg-white px-1.5 py-1"
-      style={{
-        alignSelf: isMe ? "flex-end" : "flex-start",
-        marginTop: 4,
-        border: `2.5px solid ${PALETTE.ink}`,
-        boxShadow: `0 2px 0 ${PALETTE.ink}`,
-        touchAction: "manipulation",
-      }}
-    >
-      {REACTION_EMOJI.map((e) => (
-        <button
-          key={e}
-          type="button"
-          tabIndex={-1}
-          onClick={() => onPick(e)}
-          aria-label={`React ${e}`}
-          className="grid place-items-center text-xl"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 99,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            WebkitTapHighlightColor: "transparent",
-            outline: "none",
-          }}
-        >
-          {e}
-        </button>
-      ))}
-    </div>
+function ReactionPickerOverlay({
+  anchor,
+  isMe,
+  onPick,
+  onClose,
+}: {
+  anchor: DOMRect;
+  isMe: boolean;
+  onPick: (emoji: string) => void;
+  onClose: () => void;
+}) {
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState(() => computePickerPos(anchor, isMe, PICKER_EST_W, PICKER_EST_H));
+
+  useEffect(() => {
+    window.getSelection()?.removeAllRanges();
+    const prevOverflow = document.body.style.overflow;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.overflow = "hidden";
+    document.body.style.userSelect = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.userSelect = prevUserSelect;
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = pickerRef.current;
+    if (!el) return;
+    const w = el.offsetWidth || PICKER_EST_W;
+    const h = el.offsetHeight || PICKER_EST_H;
+    setPos(computePickerPos(anchor, isMe, w, h));
+  }, [anchor, isMe]);
+
+  return createPortal(
+    <>
+      <div
+        className="fixed inset-0 z-[60]"
+        style={{
+          background: "rgba(0,0,0,0.4)",
+          touchAction: "none",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+        }}
+        onPointerDown={(e) => e.preventDefault()}
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        ref={pickerRef}
+        data-reaction-picker
+        role="toolbar"
+        aria-label="Pick reaction"
+        className="fixed z-[61] flex select-none gap-0.5 rounded-full bg-white px-1.5 py-1"
+        style={{
+          top: pos.top,
+          left: pos.left,
+          border: `2.5px solid ${PALETTE.ink}`,
+          boxShadow: `0 3px 0 ${PALETTE.ink}`,
+          touchAction: "manipulation",
+          userSelect: "none",
+          WebkitUserSelect: "none",
+          WebkitTouchCallout: "none",
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {REACTION_EMOJI.map((e) => (
+          <div
+            key={e}
+            role="button"
+            tabIndex={-1}
+            aria-label={`React ${e}`}
+            className="grid cursor-pointer place-items-center text-xl"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 99,
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              WebkitTouchCallout: "none",
+            }}
+            onPointerDown={(ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+            }}
+            onPointerUp={(ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              onPick(e);
+            }}
+          >
+            {e}
+          </div>
+        ))}
+      </div>
+    </>,
+    document.body,
   );
+}
+
+function computePickerPos(anchor: DOMRect, isMe: boolean, width: number, height: number) {
+  const gap = 8;
+  const pad = 12;
+  let top = anchor.bottom + gap;
+  let left = isMe ? anchor.right - width : anchor.left;
+  left = Math.max(pad, Math.min(left, window.innerWidth - width - pad));
+  if (top + height > window.innerHeight - pad) {
+    top = Math.max(pad, anchor.top - height - gap);
+  }
+  return { top, left };
 }
 
 function ChatImageLightbox({ url, onClose }: { url: string; onClose: () => void }) {
@@ -562,9 +655,8 @@ function ChatBubbleImpl({
   reactions,
   myUserId,
   onReact,
-  pickerOpen,
+  registerBubbleRef,
   onOpenPicker,
-  onPickReaction,
 }: {
   msg: Message;
   prev?: Message;
@@ -575,9 +667,8 @@ function ChatBubbleImpl({
   reactions: MessageReaction[];
   myUserId: string;
   onReact: (messageId: string, emoji: string) => void;
-  pickerOpen: boolean;
+  registerBubbleRef: (id: string, el: HTMLElement | null) => void;
   onOpenPicker: (messageId: string) => void;
-  onPickReaction: (emoji: string) => void;
 }) {
   const lastTapRef = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -656,6 +747,7 @@ function ChatBubbleImpl({
       )}
       {msg.image_url ? (
         <button
+          ref={(el) => registerBubbleRef(msg.id, el)}
           type="button"
           onClick={() => {
             if (longPressFired.current) return;
@@ -687,6 +779,7 @@ function ChatBubbleImpl({
         </button>
       ) : (
         <div
+          ref={(el) => registerBubbleRef(msg.id, el)}
           onClick={handleTap}
           onPointerDown={startLongPress}
           onPointerUp={cancelLongPress}
@@ -710,7 +803,6 @@ function ChatBubbleImpl({
           {msg.content}
         </div>
       )}
-      {pickerOpen && <ReactionPicker isMe={isMe} onPick={onPickReaction} />}
       {counts.length > 0 && (
         <div
           className="flex flex-wrap gap-1"
@@ -755,8 +847,8 @@ const ChatBubble = memo(ChatBubbleImpl, (a, b) => {
     a.senderTone === b.senderTone &&
     a.reactions === b.reactions &&
     a.myUserId === b.myUserId &&
-    a.pickerOpen === b.pickerOpen &&
     a.onReact === b.onReact &&
+    a.registerBubbleRef === b.registerBubbleRef &&
     a.onImageClick === b.onImageClick
   );
 });
