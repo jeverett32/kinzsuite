@@ -331,9 +331,6 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
             setPickerForId(null);
           }}
           onClose={() => setPickerForId(null)}
-          mineEmoji={
-            (reactions.get(pickerForId) ?? []).find((r) => r.user_id === userId)?.emoji ?? null
-          }
         />
       )}
     </div>
@@ -343,12 +340,17 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
 function ReactionPickerSheet({
   onPick,
   onClose,
-  mineEmoji,
 }: {
   onPick: (emoji: string) => void;
   onClose: () => void;
-  mineEmoji: string | null;
 }) {
+  const [interactive, setInteractive] = useState(false);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setInteractive(true), 80);
+    return () => clearTimeout(id);
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center"
@@ -364,6 +366,7 @@ function ReactionPickerSheet({
         style={{
           border: `2.5px solid ${PALETTE.ink}`,
           boxShadow: `0 3px 0 ${PALETTE.ink}`,
+          pointerEvents: interactive ? "auto" : "none",
         }}
       >
         {REACTION_EMOJI.map((e) => (
@@ -377,8 +380,10 @@ function ReactionPickerSheet({
               width: 44,
               height: 44,
               borderRadius: 99,
-              background: mineEmoji === e ? PALETTE.blush : "transparent",
+              background: "transparent",
               cursor: "pointer",
+              WebkitTapHighlightColor: "transparent",
+              outline: "none",
             }}
           >
             {e}
@@ -577,22 +582,36 @@ function ChatBubbleImpl({
   const lastTapRef = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
+  const longPressReady = useRef(false);
 
   const startLongPress = useCallback(() => {
     longPressFired.current = false;
+    longPressReady.current = false;
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
+      longPressReady.current = true;
       longPressFired.current = true;
-      onOpenPicker(msg.id);
     }, 450);
-  }, [msg.id, onOpenPicker]);
+  }, []);
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+    longPressReady.current = false;
   }, []);
+
+  const endLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    if (longPressReady.current) {
+      onOpenPicker(msg.id);
+      longPressReady.current = false;
+    }
+  }, [msg.id, onOpenPicker]);
 
   const handleTap = useCallback(() => {
     if (longPressFired.current) return;
@@ -650,7 +669,7 @@ function ChatBubbleImpl({
             onImageClick(msg.image_url!);
           }}
           onPointerDown={startLongPress}
-          onPointerUp={cancelLongPress}
+          onPointerUp={endLongPress}
           onPointerLeave={cancelLongPress}
           onPointerCancel={cancelLongPress}
           onContextMenu={(e) => e.preventDefault()}
@@ -677,7 +696,7 @@ function ChatBubbleImpl({
         <div
           onClick={handleTap}
           onPointerDown={startLongPress}
-          onPointerUp={cancelLongPress}
+          onPointerUp={endLongPress}
           onPointerLeave={cancelLongPress}
           onPointerCancel={cancelLongPress}
           onContextMenu={(e) => e.preventDefault()}
