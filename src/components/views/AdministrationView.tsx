@@ -31,9 +31,10 @@ type Props = {
   initialGroups: Group[];
   activeGroupId: string | null;
   groupRoles: Record<string, "owner" | "member">;
+  initialTab?: Tab;
 };
 
-type Tab = "tasks" | "quests" | "groups" | "notifications";
+export type Tab = "tasks" | "quests" | "groups" | "notifications";
 
 export function AdministrationView({
   userId,
@@ -42,11 +43,21 @@ export function AdministrationView({
   initialGroups,
   activeGroupId: initialActiveGroupId,
   groupRoles: initialGroupRoles,
+  initialTab = "tasks",
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const today = todayIso();
 
-  const [tab, setTab] = useState<Tab>("tasks");
+  const [tab, setTab] = useState<Tab>(initialTab);
+
+  const updateTab = (newTab: Tab) => {
+    setTab(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", newTab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
   const [tasks, setTasks] = useState<DailyTask[]>(() =>
     initialTasks
       .filter((t) => t.user_id === userId)
@@ -366,7 +377,7 @@ export function AdministrationView({
             <button
               key={key}
               type="button"
-              onClick={() => setTab(key)}
+              onClick={() => updateTab(key)}
               className="font-display relative min-w-[50%] flex-1 rounded-full py-2 text-xs transition-transform sm:min-w-0 sm:text-sm"
               style={{
                 background: active ? `#fff` : "transparent",

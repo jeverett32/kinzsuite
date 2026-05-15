@@ -1,10 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, getActiveGroupContext, getUserGroups } from "@/lib/groups";
-import { AdministrationView } from "@/components/views/AdministrationView";
+import { AdministrationView, type Tab } from "@/components/views/AdministrationView";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdministrationPage() {
+export default async function AdministrationPage({
+  searchParams,
+}: {
+  searchParams: { tab?: string };
+}) {
   const supabase = createClient();
   const [profile, groupContext, initialGroups] = await Promise.all([
     getCurrentProfile(),
@@ -28,6 +32,12 @@ export default async function AdministrationPage() {
     : supabase.from("wheel_quests").select("*").is("group_id", null).order("sort_order");
   const [{ data: tasks }, { data: quests }] = await Promise.all([tasksQuery, questsQuery]);
 
+  const initialTab = (
+    ["tasks", "quests", "groups", "notifications"].includes(searchParams.tab ?? "")
+      ? searchParams.tab
+      : "tasks"
+  ) as Tab;
+
   return (
     <AdministrationView
       userId={userId}
@@ -36,6 +46,7 @@ export default async function AdministrationPage() {
       initialGroups={initialGroups}
       activeGroupId={activeGroupId}
       groupRoles={groupRoles}
+      initialTab={initialTab}
     />
   );
 }
