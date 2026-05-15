@@ -54,12 +54,12 @@ function Wheel({
   const [spinning, setSpinning] = useState(false);
   const N = quests.length;
   const slice = N > 0 ? 360 / N : 0;
-  const SIZE = 220;
+  const SIZE = 280;
   const cx = SIZE / 2;
   const cy = SIZE / 2;
   const rOuter = SIZE / 2 - 4;
   const rRim = rOuter - 8;
-  const rHub = 50;
+  const rHub = 58;
 
   function spin() {
     if (spinning || N < 1) return;
@@ -223,7 +223,7 @@ function Wheel({
           const large = slice > 180 ? 1 : 0;
           const path = `M ${cx} ${cy} L ${p1.x} ${p1.y} A ${rRim} ${rRim} 0 ${large} 1 ${p2.x} ${p2.y} Z`;
           const mid = start + slice / 2;
-          const labelPos = polar(cx, cy, rRim - 26, mid);
+          const labelPos = polar(cx, cy, rRim - 36, mid);
           return (
             <g key={q.id ?? i}>
               <path
@@ -239,12 +239,12 @@ function Wheel({
                 transform={`rotate(${mid} ${labelPos.x} ${labelPos.y})`}
                 fill="#fff"
                 fontFamily="var(--font-lilita), sans-serif"
-                fontSize="13"
+                fontSize="15"
                 letterSpacing="0.5"
                 textAnchor="middle"
                 dominantBaseline="central"
                 stroke={PALETTE.ink}
-                strokeWidth="0.6"
+                strokeWidth="0.8"
                 paintOrder="stroke"
               >
                 {q.tag.toUpperCase()}
@@ -258,12 +258,12 @@ function Wheel({
           y={cy}
           fill={HUB_RED}
           fontFamily="var(--font-lilita), sans-serif"
-          fontSize="34"
+          fontSize="38"
           textAnchor="middle"
           dominantBaseline="central"
           letterSpacing="1"
           stroke={HUB_RED_DARK}
-          strokeWidth="1.4"
+          strokeWidth="1.6"
           paintOrder="stroke"
         >
           WOW!
@@ -472,10 +472,10 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId, activeGro
     <div className="kz-hscroll h-full overflow-y-auto px-4 pb-6 pt-1">
       <div
         className="relative w-full overflow-hidden rounded-2xl"
-        style={{ aspectRatio: "5 / 4", border: `3px solid ${PALETTE.ink}` }}
+        style={{ aspectRatio: "1 / 1", border: `3px solid ${PALETTE.ink}` }}
       >
         <StageBackground />
-        <div className="absolute inset-x-0 flex justify-center" style={{ bottom: -18 }}>
+        <div className="absolute inset-x-0 flex justify-center" style={{ bottom: -24 }}>
           <Wheel quests={quests} onLand={setQuestIdx} alignSliceIndex={alignSliceIndex} />
         </div>
       </div>
