@@ -63,8 +63,3 @@ end;
 $$;
 
 grant execute on function public.toggle_daily_task(uuid, text) to authenticated;
-
--- Full reset of stats to clear timezone-related mess
-delete from public.daily_log;
-update public.daily_tasks set completed_at = null;
-update public.profiles set total_points = 0;
