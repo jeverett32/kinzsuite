@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X, LogOut, Save, Settings } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
@@ -35,30 +35,6 @@ export function ProfileSheet({
   const [color, setColor] = useState<AccentColor>(initialAccentColor);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error">("idle");
-  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  const [newGroupName, setNewGroupName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [groupBusy, setGroupBusy] = useState(false);
-  const [groupStatus, setGroupStatus] = useState<string | null>(null);
-
-  const loadGroups = useCallback(async () => {
-    const [{ data: memberships }, { data: profile }] = await Promise.all([
-      supabase
-        .from("group_members")
-        .select("group_id, sort_order")
-        .eq("user_id", userId)
-        .order("sort_order", { ascending: true }),
-      supabase.from("profiles").select("active_group_id").eq("id", userId).maybeSingle(),
-    ]);
-    const ids = [...new Set((memberships ?? []).map((row) => row.group_id))];
-    const { data: groupRows } = ids.length
-      ? await supabase.from("groups").select("id, name").in("id", ids)
-      : { data: [] as { id: string; name: string }[] };
-    const groupById = new Map((groupRows ?? []).map((row) => [row.id, row]));
-    setGroups(ids.map((id) => groupById.get(id)).filter((row): row is { id: string; name: string } => Boolean(row)));
-    setActiveGroupId(profile?.active_group_id ?? null);
-  }, [supabase, userId]);
 
   useEffect(() => {
     if (open) {
@@ -66,70 +42,8 @@ export function ProfileSheet({
       setEmoji(initialAvatarEmoji);
       setColor(initialAccentColor);
       setStatus("idle");
-      void loadGroups();
     }
-  }, [open, initialDisplayName, initialAvatarEmoji, initialAccentColor, loadGroups]);
-
-  async function switchGroup(groupId: string | null) {
-    setGroupBusy(true);
-    setGroupStatus(null);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ active_group_id: groupId })
-      .eq("id", userId);
-    setGroupBusy(false);
-    if (error) {
-      setGroupStatus(error.message);
-      return;
-    }
-    setActiveGroupId(groupId);
-    window.location.reload();
-  }
-
-  async function createGroup() {
-    setGroupBusy(true);
-    setGroupStatus(null);
-    const { data, error } = await supabase.rpc("create_group", {
-      p_name: newGroupName.trim() || "My group",
-    });
-    setGroupBusy(false);
-    if (error) {
-      setGroupStatus(error.message);
-      return;
-    }
-    const invite = data?.[0]?.invite_code;
-    setGroupStatus(invite ? `Invite code: ${invite}` : "Group created");
-    setNewGroupName("");
-    await loadGroups();
-  }
-
-  async function joinGroup() {
-    if (!inviteCode.trim()) return;
-    setGroupBusy(true);
-    setGroupStatus(null);
-    const { error } = await supabase.rpc("join_group_by_code", { p_code: inviteCode.trim() });
-    setGroupBusy(false);
-    if (error) {
-      setGroupStatus(error.message);
-      return;
-    }
-    setInviteCode("");
-    await loadGroups();
-    window.location.reload();
-  }
-
-  async function leaveGroup(groupId: string) {
-    setGroupBusy(true);
-    setGroupStatus(null);
-    const { error } = await supabase.rpc("leave_group", { p_group_id: groupId });
-    setGroupBusy(false);
-    if (error) {
-      setGroupStatus(error.message);
-      return;
-    }
-    await loadGroups();
-    window.location.reload();
-  }
+  }, [open, initialDisplayName, initialAvatarEmoji, initialAccentColor]);
 
   if (!open) return null;
 
@@ -266,68 +180,6 @@ export function ProfileSheet({
               );
             })}
           </div>
-        </div>
-
-        <div className="mt-4 rounded-[22px] bg-white p-3" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
-          <div className="font-display text-xs tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
-            GROUPS
-          </div>
-          <div className="mt-2 flex flex-col gap-2">
-            {groups.map((group) => (
-              <button
-                key={group.id}
-                type="button"
-                onClick={() => void switchGroup(group.id)}
-                disabled={groupBusy}
-                className="flex items-center justify-between rounded-full px-3 py-2 text-left"
-                style={{
-                  background: activeGroupId === group.id ? PALETTE.sky : "#fff",
-                  color: PALETTE.ink,
-                  border: `2px solid ${PALETTE.ink}`,
-                  boxShadow: `0 2px 0 ${PALETTE.ink}`,
-                }}
-              >
-                <span className="font-display text-sm">{group.name}</span>
-                {activeGroupId === group.id && <span className="font-hand text-xs">active</span>}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 grid gap-2">
-            <input
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="New group name"
-              className="rounded-full px-3 py-2 text-sm outline-none"
-              style={{ border: `2px solid ${PALETTE.ink}` }}
-            />
-            <ChunkyButton type="button" color="sun" full disabled={groupBusy} onClick={() => void createGroup()}>
-              Create group
-            </ChunkyButton>
-            <input
-              value={inviteCode}
-              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              placeholder="Invite code"
-              className="rounded-full px-3 py-2 text-sm outline-none"
-              style={{ border: `2px solid ${PALETTE.ink}` }}
-            />
-            <ChunkyButton type="button" color="grass" full disabled={groupBusy || !inviteCode.trim()} onClick={() => void joinGroup()}>
-              Join group
-            </ChunkyButton>
-          </div>
-          {groups.length > 0 && (
-            <div className="mt-3">
-              <ChunkyButton
-                type="button"
-                color="white"
-                full
-                disabled={groupBusy || !activeGroupId}
-                onClick={() => activeGroupId && void leaveGroup(activeGroupId)}
-              >
-                Leave active group
-              </ChunkyButton>
-            </div>
-          )}
-          {groupStatus && <p className="mt-2 text-xs font-semibold" style={{ color: PALETTE.ink }}>{groupStatus}</p>}
         </div>
 
         <div className="mt-3">
