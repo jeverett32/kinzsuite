@@ -25,11 +25,12 @@ export function BottomNav() {
     <nav
       className="z-40 flex flex-shrink-0 justify-around gap-1 px-2.5 pt-2.5 pb-[max(env(safe-area-inset-bottom),14px)]"
       style={{
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(20px) saturate(180%)",
-        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+        background: "rgba(255,255,255,0.92)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
         borderTop: `2.5px solid ${PALETTE.ink}`,
         boxShadow: "0 -10px 24px -10px rgba(19,41,75,0.18)",
+        willChange: "transform",
       }}
     >
       {TABS.map((t) => {

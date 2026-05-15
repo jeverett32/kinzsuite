@@ -10,13 +10,18 @@ export default async function ChatPage() {
   } = await supabase.auth.getSession();
 
   const [{ data: messages }, { data: profiles }] = await Promise.all([
-    supabase.from("messages").select("*").order("created_at", { ascending: true }).limit(200),
+    supabase
+      .from("messages")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(30),
     supabase.from("profiles").select("*"),
   ]);
+  const initialMessages = (messages ?? []).slice().reverse();
 
   return (
     <ChatView
-      initialMessages={messages ?? []}
+      initialMessages={initialMessages}
       userId={session!.user.id}
       profiles={profiles ?? []}
     />

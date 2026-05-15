@@ -1,7 +1,7 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { Camera, Plus, Send, Heart } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
@@ -17,17 +17,26 @@ type Props = {
   profiles: Profile[];
 };
 
+const PAGE_SIZE = 30;
+
 export function ChatView({ initialMessages, userId, profiles }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const { markChatRead } = useChatUnread();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(initialMessages.length >= PAGE_SIZE);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const partner = profiles.find((p) => p.id !== userId);
+  const partner = useMemo(() => profiles.find((p) => p.id !== userId), [profiles, userId]);
   const partnerName = partner?.display_name || "Partner";
+
+  const profileById = useMemo(() => {
+    const m = new Map<string, Profile>();
+    profiles.forEach((p) => m.set(p.id, p));
+    return m;
+  }, [profiles]);
 
   useEffect(() => {
     void markChatRead();
@@ -54,38 +63,68 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
     };
   }, [supabase, userId, markChatRead]);
 
-  async function send() {
-    const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setDraft("");
-    const { error } = await supabase
+  const loadOlder = useCallback(async () => {
+    if (loadingOlder || !hasMore || messages.length === 0) return;
+    setLoadingOlder(true);
+    const oldest = messages[0].created_at;
+    const { data } = await supabase
       .from("messages")
-      .insert({ sender_id: userId, content: text });
-    setSending(false);
-    if (error) {
-      // Restore the text so the user can retry.
-      setDraft(text);
-    }
-  }
+      .select("*")
+      .lt("created_at", oldest)
+      .order("created_at", { ascending: false })
+      .limit(PAGE_SIZE);
+    const older = (data ?? []).slice().reverse();
+    setMessages((cur) => [...older, ...cur]);
+    if ((data?.length ?? 0) < PAGE_SIZE) setHasMore(false);
+    setLoadingOlder(false);
+  }, [supabase, messages, loadingOlder, hasMore]);
 
-  async function uploadImage(file: File) {
-    setSending(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${userId}/${crypto.randomUUID()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from("chat-images")
-      .upload(path, file, { contentType: file.type });
-    if (upErr) {
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !hasMore) return;
+    const onScroll = () => {
+      // flex-col-reverse: oldest is at top (scrollTop near max negative).
+      // Detect scrolled to top of historical content.
+      const distFromTop = el.scrollHeight + el.scrollTop - el.clientHeight;
+      if (distFromTop < 80) void loadOlder();
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [loadOlder, hasMore]);
+
+  const sendText = useCallback(
+    async (text: string) => {
+      if (!text || sending) return false;
+      setSending(true);
+      const { error } = await supabase
+        .from("messages")
+        .insert({ sender_id: userId, content: text });
       setSending(false);
-      return;
-    }
-    const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
-    await supabase
-      .from("messages")
-      .insert({ sender_id: userId, image_url: data.publicUrl });
-    setSending(false);
-  }
+      return !error;
+    },
+    [supabase, userId, sending],
+  );
+
+  const uploadImage = useCallback(
+    async (file: File) => {
+      setSending(true);
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("chat-images")
+        .upload(path, file, { contentType: file.type });
+      if (upErr) {
+        setSending(false);
+        return;
+      }
+      const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
+      await supabase
+        .from("messages")
+        .insert({ sender_id: userId, image_url: data.publicUrl });
+      setSending(false);
+    },
+    [supabase, userId],
+  );
 
   return (
     <div className="flex h-full flex-col">
@@ -129,7 +168,7 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
       >
         <div className="flex flex-col gap-1.5">
           {messages.map((m, i) => {
-            const sender = profiles.find((p) => p.id === m.sender_id);
+            const sender = profileById.get(m.sender_id);
             return (
               <ChatBubble
                 key={m.id}
@@ -141,6 +180,11 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
               />
             );
           })}
+          {loadingOlder && (
+            <div className="font-hand py-2 text-center text-xs" style={{ color: PALETTE.ink, opacity: 0.5 }}>
+              loading…
+            </div>
+          )}
         </div>
         {messages.length === 0 && (
           <div className="font-hand mx-auto mt-10 text-center text-lg" style={{ color: PALETTE.ink, opacity: 0.5 }}>
@@ -149,103 +193,137 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
         )}
       </div>
 
-      <div className="flex-shrink-0 px-3.5 pb-3 pt-1.5">
-        <div
-          className="flex items-center gap-1 rounded-full bg-white p-1"
-          style={{
-            border: `2.5px solid ${PALETTE.ink}`,
-            boxShadow: `0 3px 0 ${PALETTE.ink}`,
-          }}
-        >
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void uploadImage(f);
-              e.target.value = "";
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            aria-label="Add photo"
-            className="grid place-items-center"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 99,
-              border: `2px solid ${PALETTE.ink}`,
-              background: "#fff",
-              color: PALETTE.ink,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <Plus size={20} strokeWidth={2.6} />
-          </button>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            aria-label="Camera"
-            className="grid place-items-center"
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 99,
-              background: "transparent",
-              color: PALETTE.ink,
-              cursor: "pointer",
-              flexShrink: 0,
-            }}
-          >
-            <Camera size={18} strokeWidth={2.2} />
-          </button>
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void send();
-              }
-            }}
-            placeholder={`Message ${partnerName}…`}
-            className="font-body min-w-0 flex-1 bg-transparent px-1.5 py-2 text-sm font-medium outline-none"
-            style={{ color: PALETTE.ink }}
-          />
-          <button
-            type="button"
-            onClick={() => void send()}
-            disabled={!draft.trim() || sending}
-            aria-label="Send"
-            className="grid place-items-center"
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: 99,
-              background:
-                draft.trim() && !sending
-                  ? `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`
-                  : "#fff",
-              color: draft.trim() && !sending ? "#fff" : PALETTE.ink,
-              border: `2px solid ${PALETTE.ink}`,
-              cursor: draft.trim() && !sending ? "pointer" : "not-allowed",
-              boxShadow: draft.trim() && !sending ? `0 3px 0 ${PALETTE.ink}` : "none",
-              flexShrink: 0,
-            }}
-          >
-            <Send size={16} strokeWidth={2.6} />
-          </button>
-        </div>
-      </div>
+      <Composer
+        partnerName={partnerName}
+        sending={sending}
+        sendText={sendText}
+        onPickFile={() => fileRef.current?.click()}
+      />
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void uploadImage(f);
+          e.target.value = "";
+        }}
+      />
     </div>
   );
 }
 
-function ChatBubble({
+function ComposerImpl({
+  partnerName,
+  sending,
+  sendText,
+  onPickFile,
+}: {
+  partnerName: string;
+  sending: boolean;
+  sendText: (text: string) => Promise<boolean>;
+  onPickFile: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const trimmed = draft.trim();
+  const canSend = !!trimmed && !sending;
+
+  async function send() {
+    if (!canSend) return;
+    const text = trimmed;
+    setDraft("");
+    const ok = await sendText(text);
+    if (!ok) setDraft(text);
+  }
+
+  return (
+    <div className="flex-shrink-0 px-3.5 pb-3 pt-1.5">
+      <div
+        className="flex items-center gap-1 rounded-full bg-white p-1"
+        style={{
+          border: `2.5px solid ${PALETTE.ink}`,
+          boxShadow: `0 3px 0 ${PALETTE.ink}`,
+        }}
+      >
+        <button
+          type="button"
+          onClick={onPickFile}
+          aria-label="Add photo"
+          className="grid place-items-center"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 99,
+            border: `2px solid ${PALETTE.ink}`,
+            background: "#fff",
+            color: PALETTE.ink,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <Plus size={20} strokeWidth={2.6} />
+        </button>
+        <button
+          type="button"
+          onClick={onPickFile}
+          aria-label="Camera"
+          className="grid place-items-center"
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 99,
+            background: "transparent",
+            color: PALETTE.ink,
+            cursor: "pointer",
+            flexShrink: 0,
+          }}
+        >
+          <Camera size={18} strokeWidth={2.2} />
+        </button>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              void send();
+            }
+          }}
+          placeholder={`Message ${partnerName}…`}
+          className="font-body min-w-0 flex-1 bg-transparent px-1.5 py-2 text-sm font-medium outline-none"
+          style={{ color: PALETTE.ink }}
+        />
+        <button
+          type="button"
+          onClick={() => void send()}
+          disabled={!canSend}
+          aria-label="Send"
+          className="grid place-items-center"
+          style={{
+            width: 42,
+            height: 42,
+            borderRadius: 99,
+            background: canSend
+              ? `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`
+              : "#fff",
+            color: canSend ? "#fff" : PALETTE.ink,
+            border: `2px solid ${PALETTE.ink}`,
+            cursor: canSend ? "pointer" : "not-allowed",
+            boxShadow: canSend ? `0 3px 0 ${PALETTE.ink}` : "none",
+            flexShrink: 0,
+          }}
+        >
+          <Send size={16} strokeWidth={2.6} />
+        </button>
+      </div>
+    </div>
+  );
+}
+const Composer = memo(ComposerImpl);
+
+function ChatBubbleImpl({
   msg,
   prev,
   isMe,
@@ -259,7 +337,7 @@ function ChatBubble({
   senderTone: import("@/lib/utils").PaletteColor;
 }) {
   const consecutive =
-    prev &&
+    !!prev &&
     prev.sender_id === msg.sender_id &&
     isSameDay(new Date(prev.created_at), new Date(msg.created_at));
   const tone = PALETTE[senderTone];
@@ -285,16 +363,27 @@ function ChatBubble({
         </div>
       )}
       {msg.image_url ? (
-        <img
-          src={msg.image_url}
-          alt=""
-          className="max-w-[220px]"
+        <div
           style={{
+            position: "relative",
+            width: 220,
+            aspectRatio: "1 / 1",
             borderRadius: 18,
+            overflow: "hidden",
             border: `3px solid ${PALETTE.ink}`,
             boxShadow: `0 3px 0 ${PALETTE.ink}`,
+            background: "#f1efe8",
           }}
-        />
+        >
+          <Image
+            src={msg.image_url}
+            alt=""
+            fill
+            sizes="220px"
+            loading="lazy"
+            style={{ objectFit: "cover" }}
+          />
+        </div>
       ) : (
         <div
           className="text-sm font-semibold"
@@ -315,3 +404,14 @@ function ChatBubble({
     </div>
   );
 }
+const ChatBubble = memo(ChatBubbleImpl, (a, b) => {
+  return (
+    a.msg.id === b.msg.id &&
+    a.msg.content === b.msg.content &&
+    a.msg.image_url === b.msg.image_url &&
+    a.prev?.id === b.prev?.id &&
+    a.isMe === b.isMe &&
+    a.senderName === b.senderName &&
+    a.senderTone === b.senderTone
+  );
+});
