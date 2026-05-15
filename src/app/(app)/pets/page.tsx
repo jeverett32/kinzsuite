@@ -1,22 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAllProfiles, getSession } from "@/lib/supabase/cached";
 import { PetsView } from "@/components/views/PetsView";
 
 export const dynamic = "force-dynamic";
 
 export default async function PetsPage() {
   const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const userId = session!.user.id;
-
-  const [{ data: pets }, { data: profiles }] = await Promise.all([
+  const [session, profiles, petsRes] = await Promise.all([
+    getSession(),
+    getAllProfiles(),
     supabase.from("pets").select("*").order("created_at"),
-    supabase.from("profiles").select("*"),
   ]);
-
-  const me = profiles?.find((p) => p.id === userId) ?? null;
-  const partner = profiles?.find((p) => p.id !== userId) ?? null;
+  const userId = session!.user.id;
+  const pets = petsRes.data;
+  const me = profiles.find((p) => p.id === userId) ?? null;
+  const partner = profiles.find((p) => p.id !== userId) ?? null;
 
   return (
     <PetsView

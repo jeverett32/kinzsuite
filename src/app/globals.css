@@ -137,6 +137,23 @@ body {
   -webkit-touch-callout: none;
 }
 
+/* Off-screen chat rows skip layout/paint until they scroll near the viewport.
+   Estimated row height keeps the scrollbar honest. */
+.kz-chat-row {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 48px;
+}
+
+.kz-bubble {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 8px 13px;
+  border: 2px solid #13294b;
+  box-shadow: 0 2px 0 #13294b;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
 [data-reaction-picker] *::selection {
   background: transparent;
 }

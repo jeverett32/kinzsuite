@@ -62,6 +62,28 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
     side === "me"
       ? pets.filter((p) => p.owner_id === userId)
       : pets.filter((p) => p.owner_id !== userId);
+  const hiddenPets =
+    side === "me"
+      ? pets.filter((p) => p.owner_id !== userId)
+      : pets.filter((p) => p.owner_id === userId);
+
+  // Warm the browser cache (and SW) with the inactive side's first images so a
+  // toggle swap paints instantly instead of waiting on a network round-trip.
+  useEffect(() => {
+    const urls = hiddenPets
+      .map((p) => p.image_url)
+      .filter((u): u is string => !!u)
+      .slice(0, 3);
+    if (urls.length === 0 || typeof window === "undefined") return;
+    const handle = window.setTimeout(() => {
+      urls.forEach((u) => {
+        const img = new window.Image();
+        img.decoding = "async";
+        img.src = u;
+      });
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [hiddenPets]);
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden pb-6">

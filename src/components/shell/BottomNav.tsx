@@ -45,6 +45,7 @@ export function BottomNav() {
           <Link
             key={t.href}
             href={t.href}
+            prefetch
             className="relative flex flex-1 flex-col items-center gap-1 py-0"
           >
             <div

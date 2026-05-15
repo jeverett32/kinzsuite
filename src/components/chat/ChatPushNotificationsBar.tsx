@@ -50,41 +50,43 @@ export function ChatPushNotificationsBar() {
       return;
     }
 
-    void (async () => {
-      try {
-        await navigator.serviceWorker.register("/sw.js");
-      } catch {
-        setMode("error");
-        return;
-      }
+    const ric = (window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    }).requestIdleCallback;
+    const schedule = ric
+      ? (fn: () => void) => ric(fn, { timeout: 3000 })
+      : (fn: () => void) => window.setTimeout(fn, 1000);
 
-      if (!("PushManager" in window)) {
-        if (isIos() && !isStandaloneDisplay()) setMode("ios_add_to_home");
-        else setMode("hidden");
-        return;
-      }
+    schedule(() => {
+      void (async () => {
+        if (!("PushManager" in window)) {
+          if (isIos() && !isStandaloneDisplay()) setMode("ios_add_to_home");
+          else setMode("hidden");
+          return;
+        }
 
-      const perm = Notification.permission;
-      if (perm === "denied") {
-        setMode("hidden");
-        return;
-      }
+        const perm = Notification.permission;
+        if (perm === "denied") {
+          setMode("hidden");
+          return;
+        }
 
-      const reg = await navigator.serviceWorker.ready;
-      const existing = await reg.pushManager.getSubscription();
-      if (existing && perm === "granted") {
-        const ok = await postSubscription(existing);
-        setMode(ok ? "hidden" : "cta");
-        return;
-      }
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const existing = await reg.pushManager.getSubscription();
+          if (existing && perm === "granted") {
+            const ok = await postSubscription(existing);
+            setMode(ok ? "hidden" : "cta");
+            return;
+          }
+        } catch {
+          setMode("error");
+          return;
+        }
 
-      if (perm === "granted" && !existing) {
         setMode("cta");
-        return;
-      }
-
-      setMode("cta");
-    })();
+      })();
+    });
   }, []);
 
   const enable = useCallback(async () => {

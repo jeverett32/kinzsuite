@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSession } from "@/lib/supabase/cached";
 import { Header } from "@/components/shell/Header";
 import { BottomNav } from "@/components/shell/BottomNav";
 import { ChatUnreadProvider } from "@/components/shell/ChatUnreadContext";
+import { SWRegister } from "@/components/shell/SWRegister";
 import { SkyBackground } from "@/components/ui/SkyBackground";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   // Middleware already validates the session; use getSession() here for a
   // local cookie read (no network) instead of getUser() (Auth round-trip).
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const session = await getSession();
   const user = session?.user;
 
   if (!user) redirect("/login");
@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <>
+      <SWRegister />
       <div className="pointer-events-none fixed inset-0 z-0">
         <SkyBackground showGrass />
       </div>

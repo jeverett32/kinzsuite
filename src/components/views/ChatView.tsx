@@ -302,20 +302,21 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
           {messages.map((m, i) => {
             const sender = profileById.get(m.sender_id);
             return (
-              <ChatBubble
-                key={m.id}
-                msg={m}
-                prev={messages[i - 1]}
-                isMe={m.sender_id === userId}
-                senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
-                senderTone={sender?.accent_color ?? "sky"}
-                onImageClick={setLightboxUrl}
-                reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
-                myUserId={userId}
-                onReact={(id, emoji) => void toggleReaction(id, emoji)}
-                registerBubbleRef={registerBubbleRef}
-                onOpenPicker={openReactionPicker}
-              />
+              <div key={m.id} className="kz-chat-row">
+                <ChatBubble
+                  msg={m}
+                  prev={messages[i - 1]}
+                  isMe={m.sender_id === userId}
+                  senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
+                  senderTone={sender?.accent_color ?? "sky"}
+                  onImageClick={setLightboxUrl}
+                  reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
+                  myUserId={userId}
+                  onReact={(id, emoji) => void toggleReaction(id, emoji)}
+                  registerBubbleRef={registerBubbleRef}
+                  onOpenPicker={openReactionPicker}
+                />
+              </div>
             );
           })}
           {loadingOlder && (
@@ -786,16 +787,11 @@ function ChatBubbleImpl({
           onPointerLeave={cancelLongPress}
           onPointerCancel={cancelLongPress}
           onContextMenu={(e) => e.preventDefault()}
-          className="text-sm font-semibold"
+          className="kz-bubble"
           style={{
             background: bubbleBg,
             color: text,
-            padding: "8px 13px",
             borderRadius: radius,
-            border: `2px solid ${PALETTE.ink}`,
-            boxShadow: `0 2px 0 ${PALETTE.ink}`,
-            wordBreak: "break-word",
-            lineHeight: 1.35,
             cursor: "pointer",
             ...bubbleTouchStyle,
           }}
