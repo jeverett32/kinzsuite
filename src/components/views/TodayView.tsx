@@ -16,12 +16,13 @@ type Props = {
 };
 
 const todayIso = () => {
+  // KinzTime is Eastern Time
   const d = new Date();
-  return d.toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+  return d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 };
 
 function shiftDate(iso: string, days: number): string {
-  // Use local-relative shift
+  // Use local-relative shift for the date string
   const [y, m, d] = iso.split("-").map(Number);
   const date = new Date(y, m - 1, d + days);
   return date.toLocaleDateString("en-CA");

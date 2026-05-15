@@ -12,7 +12,7 @@ import { PALETTE, shade } from "@/lib/utils";
 const ACCENTS: AccentColor[] = ["sky", "blush", "sun", "grass", "purple"];
 
 function todayIso() {
-  return new Date().toLocaleDateString("en-CA");
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
 function formatErr(e: unknown): string {

@@ -24,10 +24,15 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const partner = profiles.find((p) => p.id !== userId);
   const partnerName = partner?.display_name || "Partner";
+
+  const scrollToBottom = (behavior: ScrollBehavior = "instant") => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
 
   useEffect(() => {
     void markChatRead();
@@ -55,8 +60,7 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   }, [supabase, userId, markChatRead]);
 
   useEffect(() => {
-    const el = scrollerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    scrollToBottom();
   }, [messages.length]);
 
   async function send() {
