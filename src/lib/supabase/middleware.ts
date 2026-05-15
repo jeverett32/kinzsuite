@@ -6,6 +6,9 @@ type CookieSet = { name: string; value: string; options?: CookieOptions };
 
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/confirm"];
 
+/** Session-less POSTs (e.g. Supabase Database Webhooks). Each route must authenticate its own caller. */
+const PUBLIC_API_PREFIXES = ["/api/push/message-hook"];
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -33,7 +36,9 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path.startsWith(p));
+  const isPublic =
+    PUBLIC_API_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`)) ||
+    PUBLIC_PATHS.some((p) => path.startsWith(p));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
