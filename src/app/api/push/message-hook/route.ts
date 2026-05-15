@@ -22,6 +22,7 @@ type HookBody = {
   record?: {
     id: string;
     sender_id: string;
+    group_id?: string | null;
     content?: string | null;
     image_url?: string | null;
   };
@@ -75,10 +76,15 @@ export async function POST(request: Request) {
 
   const [{ data: senderProfile }, { data: recipients }] = await Promise.all([
     admin.from("profiles").select("display_name").eq("id", record.sender_id).maybeSingle(),
-    admin.from("profiles").select("id").neq("id", record.sender_id),
+    record.group_id
+      ? admin.from("group_members").select("user_id").eq("group_id", record.group_id).neq("user_id", record.sender_id)
+      : admin.from("profiles").select("id").neq("id", record.sender_id),
   ]);
 
-  const recipientIds = (recipients ?? []).map((r) => r.id);
+  const recipientIds = (recipients ?? []).map((r) => {
+    if (record.group_id && "user_id" in r) return r.user_id as string;
+    return (r as { id: string }).id;
+  });
   if (recipientIds.length === 0) {
     return NextResponse.json({ ok: true, sent: 0 });
   }
