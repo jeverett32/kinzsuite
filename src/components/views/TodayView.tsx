@@ -15,12 +15,16 @@ type Props = {
   userId: string;
 };
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => {
+  const d = new Date();
+  return d.toLocaleDateString("en-CA"); // YYYY-MM-DD in local time
+};
 
 function shiftDate(iso: string, days: number): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
+  // Use local-relative shift
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d + days);
+  return date.toLocaleDateString("en-CA");
 }
 
 /** Count consecutive days ending at today (or yesterday if today not done). */
@@ -155,7 +159,10 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
         t.id === task.id ? { ...t, completed_at: wasDone ? null : today } : t,
       ),
     );
-    const { error } = await supabase.rpc("toggle_daily_task", { task_id: task.id });
+    const { error } = await supabase.rpc("toggle_daily_task", {
+      task_id: task.id,
+      local_date_iso: today,
+    });
     if (error) {
       // Revert on error
       setTasks((cur) =>
