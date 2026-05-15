@@ -63,7 +63,8 @@ export function ChatUnreadProvider({
   }, [activeGroupId, initialHasUnread]);
 
   useEffect(() => {
-    const filter = activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null";
+    if (!activeGroupId) return;
+    const filter = `group_id=eq.${activeGroupId}`;
     const channel = supabase
       .channel("chat-unread-messages")
       .on(

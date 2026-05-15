@@ -673,7 +673,7 @@ export function AdministrationView({
             PUSH NOTIFICATIONS
           </div>
           <p className="font-hand mt-1 text-xs leading-snug opacity-80" style={{ color: PALETTE.ink }}>
-            Sends a test alert to this browser if you already enabled chat alerts (Chat → Get alerts for new messages).
+            Sends a test alert to this browser if you already enabled chat alerts for your active group.
           </p>
           <div className="mt-3">
             <ChunkyButton

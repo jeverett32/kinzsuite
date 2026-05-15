@@ -18,6 +18,7 @@ type Props = {
   avatarEmoji: string;
   accentColor: AccentColor;
   activeGroupName: string | null;
+  showChat: boolean;
 };
 
 export function Header({
@@ -27,6 +28,7 @@ export function Header({
   avatarEmoji,
   accentColor,
   activeGroupName,
+  showChat,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -100,35 +102,37 @@ export function Header({
             </button>
           ) : (
             <>
-              <Link
-                href="/chat"
-                aria-label={hasUnreadChat ? "Chat, unread messages" : "Chat"}
-                className="kz-chunky font-display relative grid place-items-center"
-                style={{
-                  width: 40,
-                  height: 40,
-                  padding: 0,
-                  background: `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`,
-                  color: "#fff",
-                }}
-              >
-                <MessageCircle size={18} strokeWidth={2.4} />
-                {hasUnreadChat ? (
-                  <span
-                    className="absolute"
-                    style={{
-                      top: 4,
-                      right: 4,
-                      width: 10,
-                      height: 10,
-                      borderRadius: 99,
-                      background: PALETTE.sun,
-                      border: `2px solid ${PALETTE.ink}`,
-                      boxShadow: `0 1px 0 ${PALETTE.ink}`,
-                    }}
-                  />
-                ) : null}
-              </Link>
+              {showChat && (
+                <Link
+                  href="/chat"
+                  aria-label={hasUnreadChat ? "Chat, unread messages" : "Chat"}
+                  className="kz-chunky font-display relative grid place-items-center"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    padding: 0,
+                    background: `linear-gradient(180deg, ${PALETTE.blush}, ${shade(PALETTE.blush, -15)})`,
+                    color: "#fff",
+                  }}
+                >
+                  <MessageCircle size={18} strokeWidth={2.4} />
+                  {hasUnreadChat ? (
+                    <span
+                      className="absolute"
+                      style={{
+                        top: 4,
+                        right: 4,
+                        width: 10,
+                        height: 10,
+                        borderRadius: 99,
+                        background: PALETTE.sun,
+                        border: `2px solid ${PALETTE.ink}`,
+                        boxShadow: `0 1px 0 ${PALETTE.ink}`,
+                      }}
+                    />
+                  ) : null}
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setProfileOpen(true)}

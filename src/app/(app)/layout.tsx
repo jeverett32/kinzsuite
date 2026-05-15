@@ -20,48 +20,34 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [profile, groupContext] = await Promise.all([getCurrentProfile(), getActiveGroupContext()]);
   const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
   const activeGroupName = groupContext?.group.name ?? null;
-  const [latestMsgRes, lastReadRes] = await Promise.all([
-    activeGroupId
-      ? supabase
-          .from("messages")
-          .select("created_at")
-          .eq("group_id", activeGroupId)
-          .neq("sender_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : supabase
-          .from("messages")
-          .select("created_at")
-          .is("group_id", null)
-          .neq("sender_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-    activeGroupId
-      ? supabase
-          .from("chat_last_read")
-          .select("last_read_at")
-          .eq("user_id", user.id)
-          .eq("group_id", activeGroupId)
-          .order("last_read_at", { ascending: false })
-          .limit(1)
-          .maybeSingle()
-      : supabase
-          .from("chat_last_read")
-          .select("last_read_at")
-          .eq("user_id", user.id)
-          .is("group_id", null)
-          .order("last_read_at", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-  ]);
+  const showChat = Boolean(activeGroupId);
 
-  const initialHasUnread = Boolean(
-    latestMsgRes.data &&
-      (!lastReadRes.data?.last_read_at ||
-        new Date(latestMsgRes.data.created_at) > new Date(lastReadRes.data.last_read_at)),
-  );
+  let initialHasUnread = false;
+  if (showChat) {
+    const [latestMsgRes, lastReadRes] = await Promise.all([
+      supabase
+        .from("messages")
+        .select("created_at")
+        .eq("group_id", activeGroupId!)
+        .neq("sender_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("chat_last_read")
+        .select("last_read_at")
+        .eq("user_id", user.id)
+        .eq("group_id", activeGroupId!)
+        .order("last_read_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    initialHasUnread = Boolean(
+      latestMsgRes.data &&
+        (!lastReadRes.data?.last_read_at ||
+          new Date(latestMsgRes.data.created_at) > new Date(lastReadRes.data.last_read_at)),
+    );
+  }
 
   return (
     <>
@@ -82,6 +68,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             avatarEmoji={profile?.avatar_emoji ?? "🙂"}
             accentColor={profile?.accent_color ?? "sky"}
             activeGroupName={activeGroupName}
+            showChat={showChat}
           />
           <main className="relative z-10 min-h-0 flex-1">
             {children}

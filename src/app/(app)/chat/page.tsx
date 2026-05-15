@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/supabase/cached";
 import { getActiveGroupContext, getCurrentProfile } from "@/lib/groups";
@@ -13,24 +14,19 @@ export default async function ChatPage() {
     getActiveGroupContext(),
   ]);
   const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
+  if (!activeGroupId) redirect("/");
+
   const members = groupContext?.members.length
     ? groupContext.members.map((member) => member.profile)
     : profile
       ? [profile]
       : [];
-  const messagesQuery = activeGroupId
-    ? supabase
-        .from("messages")
-        .select("*")
-        .eq("group_id", activeGroupId)
-        .order("created_at", { ascending: false })
-        .limit(30)
-    : supabase
-        .from("messages")
-        .select("*")
-        .is("group_id", null)
-        .order("created_at", { ascending: false })
-        .limit(30);
+  const messagesQuery = supabase
+    .from("messages")
+    .select("*")
+    .eq("group_id", activeGroupId)
+    .order("created_at", { ascending: false })
+    .limit(30);
   const { data: messages } = await messagesQuery;
   const initialMessages = (messages ?? []).slice().reverse();
   const ids = initialMessages.map((m) => m.id);
