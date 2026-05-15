@@ -21,7 +21,11 @@ const TABS: Tab[] = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  if (pathname === "/chat" || pathname.startsWith("/chat/")) {
+  if (
+    pathname === "/chat" ||
+    pathname.startsWith("/chat/") ||
+    pathname === "/administration"
+  ) {
     return null;
   }
 

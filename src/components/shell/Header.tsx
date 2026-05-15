@@ -32,7 +32,8 @@ export function Header({
   const pathname = usePathname();
   const [profileOpen, setProfileOpen] = useState(false);
   const { hasUnreadChat } = useChatUnread();
-  const onChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
+  const showBackButton =
+    pathname === "/chat" || pathname.startsWith("/chat/") || pathname === "/administration";
 
   const handleBack = useCallback(() => {
     if (window.history.state?.idx > 0) {
@@ -78,7 +79,7 @@ export function Header({
         )}
 
         <div className="flex items-center gap-2">
-          {onChatRoute ? (
+          {showBackButton ? (
             <button
               type="button"
               onClick={handleBack}

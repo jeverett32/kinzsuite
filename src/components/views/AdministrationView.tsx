@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CopyCodeButton } from "@/components/onboarding/CopyCodeButton";
-import Link from "next/link";
-import { ArrowLeft, Bell, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Bell, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { createClient } from "@/lib/supabase/client";
 import { WHEEL_SLICE_COUNT } from "@/lib/quests";
@@ -334,22 +333,6 @@ export function AdministrationView({
 
   return (
     <div className="kz-hscroll h-full overflow-y-auto px-4 pb-28 pt-2">
-      <div className="mb-4 flex items-center gap-2">
-        <Link
-          href="/"
-          className="font-display inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm"
-          style={{
-            background: "#fff",
-            border: `2px solid ${PALETTE.ink}`,
-            boxShadow: `0 2px 0 ${PALETTE.ink}`,
-            color: PALETTE.ink,
-          }}
-        >
-          <ArrowLeft size={16} strokeWidth={2.4} />
-          Back
-        </Link>
-      </div>
-
       <div
         className="font-display text-[26px] leading-none"
         style={{ color: PALETTE.ink, textShadow: "0 2px 0 rgba(255,255,255,0.45)" }}
