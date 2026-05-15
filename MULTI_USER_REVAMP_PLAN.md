@@ -43,36 +43,36 @@ Goal: guarantee we can restore the current database byte-for-byte if anything go
 Goal: introduce group primitives without breaking existing data.
 
 ### 1.1 New tables
-- [ ] `groups` (id, name, invite_code, created_by, created_at)
-- [ ] `group_members` (group_id, user_id, role, joined_at, sort_order)
-- [ ] `group_invites` (code, group_id, created_by, expires_at, revoked_at, uses_remaining)
+- [x] `groups` (id, name, invite_code, created_by, created_at)
+- [x] `group_members` (group_id, user_id, role, joined_at, sort_order)
+- [x] `group_invites` (code, group_id, created_by, expires_at, revoked_at, uses_remaining)
   - Decision: separate invites table vs. single `invite_code` on `groups`. **Default: separate table** so codes can rotate/expire without losing group identity.
-- [ ] Indexes: `(user_id, group_id)`, `(group_id, user_id)`, `(invite_code)` unique
+- [x] Indexes: `(user_id, group_id)`, `(group_id, user_id)`, `(invite_code)` unique
 
 ### 1.2 Add `group_id` to shared tables
-- [ ] `messages.group_id`
-- [ ] `daily_tasks.group_id`
-- [ ] `date_wheel_pick.group_id`
-- [ ] `wheel_quests.group_id` (or future `activity_wheel.group_id`)
-- [ ] `message_reactions` inherits via `messages`
-- [ ] `chat_last_read.group_id`
-- [ ] Any future shared settings table
+- [x] `messages.group_id`
+- [x] `daily_tasks.group_id`
+- [x] `date_wheel_pick.group_id`
+- [x] `wheel_quests.group_id` (or future `activity_wheel.group_id`)
+- [x] `message_reactions` inherits via `messages`
+- [x] `chat_last_read.group_id`
+- [x] Any future shared settings table
 
 ### 1.3 Personal tables stay user-scoped
-- [ ] `pets` → keep `user_id` only, NO `group_id`
-- [ ] `profiles` → add `active_group_id` (FK to `groups`, nullable)
-- [ ] `push_subscriptions` → user-scoped, unchanged
+- [x] `pets` → keep `user_id` only, NO `group_id`
+- [x] `profiles` → add `active_group_id` (FK to `groups`, nullable)
+- [x] `push_subscriptions` → user-scoped, unchanged
 
 ### 1.4 Helper functions (SECURITY DEFINER)
-- [ ] `is_group_member(gid uuid) returns boolean`
-- [ ] `current_active_group() returns uuid` (reads `profiles.active_group_id`)
-- [ ] `get_group_members(gid uuid)` ordered (caller first, then by `sort_order`)
-- [ ] `generate_invite_code()` — 8–10 char nanoid-style, collision-checked
+- [x] `is_group_member(gid uuid) returns boolean`
+- [x] `current_active_group() returns uuid` (reads `profiles.active_group_id`)
+- [x] `get_group_members(gid uuid)` ordered (caller first, then by `sort_order`)
+- [x] `generate_invite_code()` — 8–10 char nanoid-style, collision-checked
 
 ### 1.5 Migration files
-- [ ] `0013_groups_up.sql` / `0013_groups_down.sql`
-- [ ] `0014_group_id_columns_up.sql` / `_down.sql`
-- [ ] `0015_helpers_up.sql` / `_down.sql`
+- [x] `0013_groups_up.sql` / `0013_groups_down.sql`
+- [x] `0014_group_id_columns_up.sql` / `_down.sql`
+- [x] `0015_helpers_up.sql` / `_down.sql`
 
 **Gate:** Branch DB has new schema, old data still queryable, all existing tests pass.
 
@@ -100,27 +100,27 @@ Goal: strip the hardcoded "partner" model.
 Goal: all access flows through `is_group_member`.
 
 ### 3.1 Policy rewrite
-- [ ] `messages`: select/insert/update/delete gated by `is_group_member(group_id)`
-- [ ] `daily_tasks`: same
-- [ ] `date_wheel_pick`: same
-- [ ] `wheel_quests`: same
-- [ ] `chat_last_read`: same
-- [ ] `message_reactions`: same (via message's group)
-- [ ] `groups`: members can SELECT; only `created_by` (owner) can UPDATE name; INSERT open to any authed user
-- [ ] `group_members`: members can SELECT own group; owner can DELETE; users can DELETE self (leave)
-- [ ] `group_invites`: members can SELECT; owner can INSERT/REVOKE
+- [x] `messages`: select/insert/update/delete gated by `is_group_member(group_id)`
+- [x] `daily_tasks`: same
+- [x] `date_wheel_pick`: same
+- [x] `wheel_quests`: same
+- [x] `chat_last_read`: same
+- [x] `message_reactions`: same (via message's group)
+- [x] `groups`: members can SELECT; only `created_by` (owner) can UPDATE name; INSERT open to any authed user
+- [x] `group_members`: members can SELECT own group; owner can DELETE; users can DELETE self (leave)
+- [x] `group_invites`: members can SELECT; owner can INSERT/REVOKE
 
 ### 3.2 Personal-data policies untouched
-- [ ] `pets` policies remain user_id-based
-- [ ] `profiles` unchanged except new column
+- [x] `pets` policies remain user_id-based
+- [x] `profiles` unchanged except new column
 
 ### 3.3 RLS test suite
-- [ ] Seed script: 3 users, 2 groups, overlap user
-- [ ] Tests: cross-group read blocked, cross-group write blocked, non-member sees nothing
-- [ ] pgTAP or plain SQL assertions checked into `supabase/tests/`
+- [x] Seed script: 3 users, 2 groups, overlap user
+- [x] Tests: cross-group read blocked, cross-group write blocked, non-member sees nothing
+- [x] pgTAP or plain SQL assertions checked into `supabase/tests/`
 
 ### 3.4 Migration files
-- [ ] `0017_rls_groups_up.sql` / `_down.sql`
+- [x] `0017_rls_groups_up.sql` / `_down.sql`
 
 **Gate:** RLS test suite green on branch DB. Manual smoke test confirms John in group A cannot see group B messages.
 
