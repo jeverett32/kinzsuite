@@ -47,6 +47,23 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (!pickerForId) return;
+    const close = (e: PointerEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest("[data-reaction-picker]")) return;
+      if (t.closest(`[data-chat-bubble="${pickerForId}"]`)) return;
+      setPickerForId(null);
+    };
+    const id = window.setTimeout(() => {
+      document.addEventListener("pointerdown", close, true);
+    }, 0);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("pointerdown", close, true);
+    };
+  }, [pickerForId]);
+
   const partner = useMemo(() => profiles.find((p) => p.id !== userId), [profiles, userId]);
   const partnerName = partner?.display_name || "Partner";
 
@@ -284,7 +301,12 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
                 reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
                 myUserId={userId}
                 onReact={(id, emoji) => void toggleReaction(id, emoji)}
+                pickerOpen={pickerForId === m.id}
                 onOpenPicker={setPickerForId}
+                onPickReaction={(emoji) => {
+                  void toggleReaction(m.id, emoji);
+                  setPickerForId(null);
+                }}
               />
             );
           })}
@@ -323,73 +345,47 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
       {lightboxUrl && (
         <ChatImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
       )}
-
-      {pickerForId && (
-        <ReactionPickerSheet
-          onPick={(emoji) => {
-            void toggleReaction(pickerForId, emoji);
-            setPickerForId(null);
-          }}
-          onClose={() => setPickerForId(null)}
-        />
-      )}
     </div>
   );
 }
 
-function ReactionPickerSheet({
-  onPick,
-  onClose,
-}: {
-  onPick: (emoji: string) => void;
-  onClose: () => void;
-}) {
-  const [interactive, setInteractive] = useState(false);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => setInteractive(true), 80);
-    return () => clearTimeout(id);
-  }, []);
-
+function ReactionPicker({ onPick, isMe }: { onPick: (emoji: string) => void; isMe: boolean }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      style={{ background: "rgba(0,0,0,0.35)" }}
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
+      data-reaction-picker
+      role="toolbar"
       aria-label="Pick reaction"
+      className="flex gap-0.5 rounded-full bg-white px-1.5 py-1"
+      style={{
+        alignSelf: isMe ? "flex-end" : "flex-start",
+        marginTop: 4,
+        border: `2.5px solid ${PALETTE.ink}`,
+        boxShadow: `0 2px 0 ${PALETTE.ink}`,
+        touchAction: "manipulation",
+      }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="mb-[max(env(safe-area-inset-bottom),16px)] flex gap-2 rounded-full bg-white px-3 py-2"
-        style={{
-          border: `2.5px solid ${PALETTE.ink}`,
-          boxShadow: `0 3px 0 ${PALETTE.ink}`,
-          pointerEvents: interactive ? "auto" : "none",
-        }}
-      >
-        {REACTION_EMOJI.map((e) => (
-          <button
-            key={e}
-            type="button"
-            onClick={() => onPick(e)}
-            aria-label={`React ${e}`}
-            className="grid place-items-center text-2xl"
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 99,
-              background: "transparent",
-              cursor: "pointer",
-              WebkitTapHighlightColor: "transparent",
-              outline: "none",
-            }}
-          >
-            {e}
-          </button>
-        ))}
-      </div>
+      {REACTION_EMOJI.map((e) => (
+        <button
+          key={e}
+          type="button"
+          tabIndex={-1}
+          onClick={() => onPick(e)}
+          aria-label={`React ${e}`}
+          className="grid place-items-center text-xl"
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 99,
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            WebkitTapHighlightColor: "transparent",
+            outline: "none",
+          }}
+        >
+          {e}
+        </button>
+      ))}
     </div>
   );
 }
@@ -566,7 +562,9 @@ function ChatBubbleImpl({
   reactions,
   myUserId,
   onReact,
+  pickerOpen,
   onOpenPicker,
+  onPickReaction,
 }: {
   msg: Message;
   prev?: Message;
@@ -577,41 +575,29 @@ function ChatBubbleImpl({
   reactions: MessageReaction[];
   myUserId: string;
   onReact: (messageId: string, emoji: string) => void;
+  pickerOpen: boolean;
   onOpenPicker: (messageId: string) => void;
+  onPickReaction: (emoji: string) => void;
 }) {
   const lastTapRef = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
-  const longPressReady = useRef(false);
 
   const startLongPress = useCallback(() => {
     longPressFired.current = false;
-    longPressReady.current = false;
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
-      longPressReady.current = true;
       longPressFired.current = true;
+      onOpenPicker(msg.id);
     }, 450);
-  }, []);
+  }, [msg.id, onOpenPicker]);
 
   const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    longPressReady.current = false;
   }, []);
-
-  const endLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    if (longPressReady.current) {
-      onOpenPicker(msg.id);
-      longPressReady.current = false;
-    }
-  }, [msg.id, onOpenPicker]);
 
   const handleTap = useCallback(() => {
     if (longPressFired.current) return;
@@ -648,8 +634,15 @@ function ChatBubbleImpl({
     ? `20px ${consecutive ? 8 : 20}px 8px 20px`
     : `${consecutive ? 8 : 20}px 20px 20px 8px`;
 
+  const bubbleTouchStyle = {
+    touchAction: "manipulation" as const,
+    WebkitTouchCallout: "none" as const,
+    userSelect: "none" as const,
+  };
+
   return (
     <div
+      data-chat-bubble={msg.id}
       className="flex max-w-[80%] flex-col gap-0.5"
       style={{ alignSelf: isMe ? "flex-end" : "flex-start", alignItems: isMe ? "flex-end" : "flex-start" }}
     >
@@ -669,13 +662,13 @@ function ChatBubbleImpl({
             onImageClick(msg.image_url!);
           }}
           onPointerDown={startLongPress}
-          onPointerUp={endLongPress}
+          onPointerUp={cancelLongPress}
           onPointerLeave={cancelLongPress}
           onPointerCancel={cancelLongPress}
           onContextMenu={(e) => e.preventDefault()}
           aria-label="View photo full screen"
           className="block p-0"
-          style={{ cursor: "pointer", background: "none", border: "none", touchAction: "manipulation" }}
+          style={{ cursor: "pointer", background: "none", border: "none", ...bubbleTouchStyle }}
         >
           <img
             src={msg.image_url}
@@ -696,7 +689,7 @@ function ChatBubbleImpl({
         <div
           onClick={handleTap}
           onPointerDown={startLongPress}
-          onPointerUp={endLongPress}
+          onPointerUp={cancelLongPress}
           onPointerLeave={cancelLongPress}
           onPointerCancel={cancelLongPress}
           onContextMenu={(e) => e.preventDefault()}
@@ -711,13 +704,13 @@ function ChatBubbleImpl({
             wordBreak: "break-word",
             lineHeight: 1.35,
             cursor: "pointer",
-            userSelect: "none",
-            touchAction: "manipulation",
+            ...bubbleTouchStyle,
           }}
         >
           {msg.content}
         </div>
       )}
+      {pickerOpen && <ReactionPicker isMe={isMe} onPick={onPickReaction} />}
       {counts.length > 0 && (
         <div
           className="flex flex-wrap gap-1"
@@ -762,6 +755,7 @@ const ChatBubble = memo(ChatBubbleImpl, (a, b) => {
     a.senderTone === b.senderTone &&
     a.reactions === b.reactions &&
     a.myUserId === b.myUserId &&
+    a.pickerOpen === b.pickerOpen &&
     a.onReact === b.onReact &&
     a.onImageClick === b.onImageClick
   );
