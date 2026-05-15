@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "migrate:verify-pairs": "bash scripts/verify-migration-pairs.sh",
     "resize-images": "node scripts/resize-existing-images.mjs"
   },
   "dependencies": {

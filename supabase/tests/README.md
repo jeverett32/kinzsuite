@@ -30,7 +30,7 @@ Exercises Phase 3 policies after migrations **0013–0020** are applied on a **b
 ### Prerequisites
 
 1. Supabase branch or `supabase start` local stack.
-2. Migrations through `0020_cutover_helpers_up.sql` applied (`0013`–`0015` from Phase 1, `0016`, `0017`, `0018`, `0019`, `0020`).
+2. Migrations through `0020_cutover_helpers.sql` applied (`0013`–`0015` from Phase 1, `0016`, `0017`, `0018`, `0019`, `0020`).
 3. `pgcrypto` enabled (for test user passwords).
 
 ### Run
