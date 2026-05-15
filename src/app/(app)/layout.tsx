@@ -19,6 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const [profile, groupContext] = await Promise.all([getCurrentProfile(), getActiveGroupContext()]);
   const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
+  const activeGroupName = groupContext?.group.name ?? null;
   const [latestMsgRes, lastReadRes] = await Promise.all([
     activeGroupId
       ? supabase
@@ -80,6 +81,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             displayName={profile?.display_name ?? ""}
             avatarEmoji={profile?.avatar_emoji ?? "🙂"}
             accentColor={profile?.accent_color ?? "sky"}
+            activeGroupName={activeGroupName}
           />
           <main className="relative z-10 min-h-0 flex-1">
             {children}

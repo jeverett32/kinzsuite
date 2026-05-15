@@ -17,6 +17,7 @@ type Props = {
   displayName: string;
   avatarEmoji: string;
   accentColor: AccentColor;
+  activeGroupName: string | null;
 };
 
 export function Header({
@@ -25,6 +26,7 @@ export function Header({
   displayName,
   avatarEmoji,
   accentColor,
+  activeGroupName,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -62,6 +64,18 @@ export function Header({
             Kinz<span style={{ color: PALETTE.blush }}>Suite</span>
           </span>
         </div>
+        {activeGroupName && (
+          <div
+            className="font-display hidden max-w-[140px] truncate rounded-full bg-white px-2.5 py-1 text-xs sm:block"
+            style={{
+              color: PALETTE.ink,
+              border: `2px solid ${PALETTE.ink}`,
+              boxShadow: `0 2px 0 ${PALETTE.ink}`,
+            }}
+          >
+            {activeGroupName}
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
           {onChatRoute ? (

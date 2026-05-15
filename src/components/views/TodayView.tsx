@@ -141,7 +141,7 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
   const headerLabel = format(new Date(), "EEEE · MMM d");
 
   async function toggle(task: DailyTask) {
-    if (task.user_id !== userId) return; // can't toggle partner's tasks
+    if (task.user_id !== userId) return; // only the selected member can toggle their tasks
     // Optimistic flip on the visible state
     const wasDone = task.completed_at === today;
     setTasks((cur) =>

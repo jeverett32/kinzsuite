@@ -3,6 +3,13 @@ import { getSession } from "@/lib/supabase/cached";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
 
+export type Group = {
+  id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+};
+
 export type GroupMemberProfile = {
   user_id: string;
   role: "owner" | "member";
@@ -14,6 +21,7 @@ export type GroupMemberProfile = {
 export type ActiveGroupContext = {
   profile: Profile;
   activeGroupId: string;
+  group: Group;
   members: GroupMemberProfile[];
 };
 
@@ -33,6 +41,13 @@ export const getActiveGroupContext = cache(async (): Promise<ActiveGroupContext 
   if (!profile || !activeGroupId) return null;
 
   const supabase = createClient();
+  const { data: group, error: groupErr } = await supabase
+    .from("groups")
+    .select("*")
+    .eq("id", activeGroupId)
+    .maybeSingle();
+  if (groupErr) throw groupErr;
+
   const { data: memberRows, error: memberErr } = await supabase.rpc("get_group_members", {
     gid: activeGroupId,
   });
@@ -40,7 +55,7 @@ export const getActiveGroupContext = cache(async (): Promise<ActiveGroupContext 
 
   const memberIds = (memberRows ?? []).map((row) => row.user_id);
   if (memberIds.length === 0) {
-    return { profile, activeGroupId, members: [] };
+    return { profile, activeGroupId, group: group as Group, members: [] };
   }
 
   const { data: memberProfiles, error: profileErr } = await supabase
@@ -54,6 +69,7 @@ export const getActiveGroupContext = cache(async (): Promise<ActiveGroupContext 
   return {
     profile,
     activeGroupId,
+    group: group as Group,
     members: (memberRows ?? [])
       .map((row) => {
         const memberProfile = profileById.get(row.user_id);
@@ -62,4 +78,32 @@ export const getActiveGroupContext = cache(async (): Promise<ActiveGroupContext 
       })
       .filter((row): row is GroupMemberProfile => row !== null),
   };
+});
+
+export const getUserGroups = cache(async (): Promise<Group[]> => {
+  const session = await getSession();
+  if (!session) return [];
+
+  const supabase = createClient();
+  const { data: memberships, error: membershipErr } = await supabase
+    .from("group_members")
+    .select("group_id")
+    .eq("user_id", session.user.id)
+    .order("sort_order", { ascending: true });
+  if (membershipErr) throw membershipErr;
+
+  const groupIds = [...new Set((memberships ?? []).map((row) => row.group_id))];
+  if (groupIds.length === 0) return [];
+
+  const { data: groups, error: groupErr } = await supabase
+    .from("groups")
+    .select("*")
+    .in("id", groupIds);
+  if (groupErr) throw groupErr;
+
+  return (groups ?? []).sort((a, b) => {
+    const ai = groupIds.indexOf(a.id);
+    const bi = groupIds.indexOf(b.id);
+    return ai - bi;
+  }) as Group[];
 });

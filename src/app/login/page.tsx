@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock } from "lucide-react";
+import { Mail, Lock, UserPlus, LogIn, KeyRound } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { SkyBackground } from "@/components/ui/SkyBackground";
 import { Logo } from "@/components/ui/Logo";
@@ -13,34 +13,59 @@ function LoginInner() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
+  const [mode, setMode] = useState<"sign-in" | "create-account">("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [signingIn, setSigningIn] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSigningIn(true);
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    setBusy(true);
 
-    if (error) {
-      setSigningIn(false);
-      // Don't leak whether the email exists — this app is private and a
-      // generic message keeps things tidy.
-      setError("That didn't work. Check your email and password.");
+    if (mode === "sign-in") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      setBusy(false);
+      if (error) {
+        setError("That didn't work. Check your email and password.");
+        return;
+      }
+      router.replace(next);
+      router.refresh();
       return;
     }
 
-    // Hard-refresh the destination so server components pick up the new
-    // session cookie immediately.
-    router.replace(next);
-    router.refresh();
+    const redirectUrl = new URL("/auth/callback", window.location.origin);
+    redirectUrl.searchParams.set("next", "/onboarding");
+    redirectUrl.searchParams.set("mode", "create-account");
+    if (groupName.trim()) redirectUrl.searchParams.set("groupName", groupName.trim());
+    if (inviteCode.trim()) redirectUrl.searchParams.set("invite", inviteCode.trim());
+
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: {
+          display_name: displayName.trim(),
+        },
+        emailRedirectTo: redirectUrl.toString(),
+      },
+    });
+    setBusy(false);
+    if (error) {
+      setError("That didn't work. Check your details and try again.");
+      return;
+    }
+    router.replace(`/login?next=${encodeURIComponent("/onboarding")}`);
   }
 
   return (
@@ -58,7 +83,25 @@ function LoginInner() {
           Kinz<span style={{ color: PALETTE.blush }}>Suite</span>
         </div>
         <div className="font-hand mt-1 text-xl" style={{ color: PALETTE.ink, opacity: 0.7 }}>
-          a cozy world for two
+          a cozy world for your group
+        </div>
+
+        <div className="mt-5 flex rounded-full p-1" style={{ background: "rgba(255,255,255,0.5)", border: `2px solid ${PALETTE.ink}` }}>
+          {(["sign-in", "create-account"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setMode(tab)}
+              className="font-display flex-1 rounded-full py-2 text-sm"
+              style={{
+                background: mode === tab ? "#fff" : "transparent",
+                color: PALETTE.ink,
+                boxShadow: mode === tab ? `0 2px 0 ${PALETTE.ink}` : "none",
+              }}
+            >
+              {tab === "sign-in" ? "Sign in" : "Create account"}
+            </button>
+          ))}
         </div>
 
         <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-3 text-left">
@@ -118,8 +161,63 @@ function LoginInner() {
             </div>
           </label>
 
-          <ChunkyButton type="submit" color="blush" full disabled={signingIn}>
-            {signingIn ? "Signing in…" : "Sign in"}
+          {mode === "create-account" && (
+            <>
+              <label className="block">
+                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+                  DISPLAY NAME
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
+                  <UserPlus size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
+                  <input
+                    type="text"
+                    required
+                    autoComplete="nickname"
+                    placeholder="Jess"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="font-body flex-1 bg-transparent text-base outline-none"
+                    style={{ color: PALETTE.ink }}
+                  />
+                </div>
+              </label>
+              <label className="block">
+                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+                  GROUP NAME
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
+                  <LogIn size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
+                  <input
+                    type="text"
+                    placeholder="Jess & Cam"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    className="font-body flex-1 bg-transparent text-base outline-none"
+                    style={{ color: PALETTE.ink }}
+                  />
+                </div>
+              </label>
+              <label className="block">
+                <div className="font-display mb-1 text-[11px] tracking-wider" style={{ color: PALETTE.ink, opacity: 0.65 }}>
+                  INVITE CODE (optional)
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2" style={{ border: `2.5px solid ${PALETTE.ink}`, boxShadow: `0 3px 0 ${PALETTE.ink}` }}>
+                  <KeyRound size={18} style={{ color: PALETTE.ink, opacity: 0.6 }} />
+                  <input
+                    type="text"
+                    placeholder="ABC123..."
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                    className="font-body flex-1 bg-transparent text-base outline-none"
+                    style={{ color: PALETTE.ink }}
+                  />
+                </div>
+              </label>
+            </>
+          )}
+
+          <ChunkyButton type="submit" color="blush" full disabled={busy}>
+            {busy ? (mode === "sign-in" ? "Signing in…" : "Creating…") : mode === "sign-in" ? "Sign in" : "Create account"}
           </ChunkyButton>
 
           {error && (
@@ -130,7 +228,9 @@ function LoginInner() {
             className="font-hand mt-1 text-center text-base"
             style={{ color: PALETTE.ink, opacity: 0.5 }}
           >
-            this app is just for two — ask the other half to add you
+            {mode === "sign-in"
+              ? "use your existing account to sign in"
+              : "we'll set up your group after email verification"}
           </p>
         </form>
       </div>
