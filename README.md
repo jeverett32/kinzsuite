@@ -1,6 +1,6 @@
 <div align="center">
 
-![KinzSuite](./public/icon.png)
+<img src="./public/icon.png" alt="KinzSuite" width="120" height="120" />
 
 # KinzSuite
 
