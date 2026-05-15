@@ -4,7 +4,7 @@
 
 # KinzSuite
 
-**A cozy, playful app for couples to share moments, celebrate each day, and connect.**
+**A cozy, playful app for groups and couples to share moments, celebrate each day, and connect.**
 
 </div>
 
@@ -12,28 +12,31 @@
 
 ## What is KinzSuite?
 
-KinzSuite is a charming companion app built for two people. It's designed to help you stay connected, keep each other accountable, and add a little fun to your day together. With sticker-styled graphics and a warm, inviting interface, it feels more like a game than a productivity tool.
+KinzSuite is a charming companion app designed for private groups—whether you're a couple, a family, or a small circle of friends. It's built to help you stay connected, keep each other accountable, and add a little fun to your daily routine. With sticker-styled graphics and a warm, interactive interface, it feels more like a shared game than a productivity tool.
 
-Whether you're a long-distance couple, roommates, or just want a private space to share moments, KinzSuite keeps you in sync with real-time updates and a playful aesthetic.
+KinzSuite keeps your circle in sync with real-time updates, shared goals, and a playful aesthetic that works beautifully on any device.
 
 ---
 
 ## ✨ Features
 
 ### 📋 **Today**
-A shared daily checklist that both of you can see and check off in real-time. Perfect for keeping each other motivated—from gym sessions to household chores to self-care reminders. Your progress syncs instantly.
+A shared group checklist that everyone in your group can see and check off. Each member has their own tasks, but progress is visible to all in real-time. Perfect for household chores, fitness goals, or just keeping the group motivated.
 
 ### 🐾 **Pets**
-Create a polaroid-style photo gallery of memories together. Upload photos, pick from 8 adorable pet species, and build a digital scrapbook that only you two can see.
+Adopt and care for your own digital companions. Upload photos, pick from adorable species, and build a personal polaroid-style scrapbook. It's your private space to curate memories of your favorite friends.
 
 ### 🎡 **Wheel**
-Can't decide what to do tonight? Spin the wheel to get a random date idea, from cozy at-home activities to adventurous outings. Let chance help break the decision paralysis.
+Can't decide what to do? Spin the wheel to get a random activity for the group. From cozy nights in to adventurous outings, let the wheel break the decision paralysis for everyone.
 
 ### 💬 **Chat**
-Real-time messaging with image support. Share photos, quick thoughts, or longer conversations—all in one place, synced between you both.
+Real-time group messaging with image support and emoji reactions. Share photos, quick thoughts, or celebrate moments together—all synced instantly across the entire group.
+
+### 👥 **Groups**
+Create multiple private groups or join existing ones with a simple invite code. Switch between groups easily to keep different parts of your life organized and connected.
 
 ### 🔐 **Private & Secure**
-This app is built for intimacy. Email + password sign-in ensures only you and your partner can access it. Hard-capped at 2 users—no more, no less.
+KinzSuite is built for intimacy and privacy. Email + password sign-in and invite-only groups ensure that only the people you choose can enter your space.
 
 ---
 
