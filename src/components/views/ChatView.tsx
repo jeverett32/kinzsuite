@@ -10,24 +10,39 @@ import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import { ChatPushNotificationsBar } from "@/components/chat/ChatPushNotificationsBar";
 import { resizeImage } from "@/lib/image";
-import type { Message, Profile } from "@/lib/supabase/types";
+import type { Message, MessageReaction, Profile } from "@/lib/supabase/types";
 
 type Props = {
   initialMessages: Message[];
+  initialReactions: MessageReaction[];
   userId: string;
   profiles: Profile[];
 };
 
 const PAGE_SIZE = 30;
+const REACTION_EMOJI = ["❤️", "😂", "😮", "😢", "👍", "🔥"] as const;
+const DEFAULT_REACTION = "❤️";
+const EMPTY_REACTIONS: MessageReaction[] = [];
 
-export function ChatView({ initialMessages, userId, profiles }: Props) {
+export function ChatView({ initialMessages, initialReactions, userId, profiles }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const { markChatRead } = useChatUnread();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [reactions, setReactions] = useState<Map<string, MessageReaction[]>>(() => {
+    const m = new Map<string, MessageReaction[]>();
+    for (const r of initialReactions) {
+      const list = m.get(r.message_id) ?? [];
+      list.push(r);
+      m.set(r.message_id, list);
+    }
+    return m;
+  });
+  const reactionsRef = useRef(reactions);
   const [sending, setSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(initialMessages.length >= PAGE_SIZE);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [pickerForId, setPickerForId] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +60,10 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   }, [markChatRead]);
 
   useEffect(() => {
+    reactionsRef.current = reactions;
+  }, [reactions]);
+
+  useEffect(() => {
     const channel = supabase
       .channel("messages")
       .on(
@@ -59,11 +78,69 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
           if (next.sender_id !== userId) void markChatRead();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "message_reactions" },
+        (payload) => {
+          setReactions((cur) => {
+            const next = new Map(cur);
+            if (payload.eventType === "DELETE") {
+              const old = payload.old as Partial<MessageReaction>;
+              if (!old.message_id || !old.user_id) return cur;
+              const list = (next.get(old.message_id) ?? []).filter(
+                (r) => r.user_id !== old.user_id,
+              );
+              if (list.length) next.set(old.message_id, list);
+              else next.delete(old.message_id);
+              return next;
+            }
+            const row = payload.new as MessageReaction;
+            const list = (next.get(row.message_id) ?? []).filter(
+              (r) => r.user_id !== row.user_id,
+            );
+            list.push(row);
+            next.set(row.message_id, list);
+            return next;
+          });
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, [supabase, userId, markChatRead]);
+
+  const toggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      const base = reactionsRef.current;
+      const list = base.get(messageId) ?? [];
+      const mine = list.find((r) => r.user_id === userId);
+      const optimistic = new Map(base);
+      const others = list.filter((r) => r.user_id !== userId);
+      if (mine && mine.emoji === emoji) {
+        if (others.length) optimistic.set(messageId, others);
+        else optimistic.delete(messageId);
+        reactionsRef.current = optimistic;
+        setReactions(optimistic);
+        await supabase
+          .from("message_reactions")
+          .delete()
+          .eq("message_id", messageId)
+          .eq("user_id", userId);
+      } else {
+        optimistic.set(messageId, [
+          ...others,
+          { message_id: messageId, user_id: userId, emoji, created_at: new Date().toISOString() },
+        ]);
+        reactionsRef.current = optimistic;
+        setReactions(optimistic);
+        await supabase
+          .from("message_reactions")
+          .upsert({ message_id: messageId, user_id: userId, emoji });
+      }
+    },
+    [supabase, userId],
+  );
 
   const loadOlder = useCallback(async () => {
     if (loadingOlder || !hasMore || messages.length === 0) return;
@@ -77,6 +154,26 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
       .limit(PAGE_SIZE);
     const older = (data ?? []).slice().reverse();
     setMessages((cur) => [...older, ...cur]);
+    if (older.length) {
+      const ids = older.map((m) => m.id);
+      const { data: rx } = await supabase
+        .from("message_reactions")
+        .select("*")
+        .in("message_id", ids);
+      if (rx?.length) {
+        setReactions((cur) => {
+          const next = new Map(cur);
+          for (const r of rx) {
+            const list = (next.get(r.message_id) ?? []).filter(
+              (x) => x.user_id !== r.user_id,
+            );
+            list.push(r);
+            next.set(r.message_id, list);
+          }
+          return next;
+        });
+      }
+    }
     if ((data?.length ?? 0) < PAGE_SIZE) setHasMore(false);
     setLoadingOlder(false);
   }, [supabase, messages, loadingOlder, hasMore]);
@@ -183,6 +280,10 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
                 senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
                 senderTone={sender?.accent_color ?? "sky"}
                 onImageClick={setLightboxUrl}
+                reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
+                myUserId={userId}
+                onReact={(id, emoji) => void toggleReaction(id, emoji)}
+                onOpenPicker={setPickerForId}
               />
             );
           })}
@@ -221,6 +322,68 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
       {lightboxUrl && (
         <ChatImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
       )}
+
+      {pickerForId && (
+        <ReactionPickerSheet
+          onPick={(emoji) => {
+            void toggleReaction(pickerForId, emoji);
+            setPickerForId(null);
+          }}
+          onClose={() => setPickerForId(null)}
+          mineEmoji={
+            (reactions.get(pickerForId) ?? []).find((r) => r.user_id === userId)?.emoji ?? null
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function ReactionPickerSheet({
+  onPick,
+  onClose,
+  mineEmoji,
+}: {
+  onPick: (emoji: string) => void;
+  onClose: () => void;
+  mineEmoji: string | null;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      style={{ background: "rgba(0,0,0,0.35)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Pick reaction"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="mb-[max(env(safe-area-inset-bottom),16px)] flex gap-2 rounded-full bg-white px-3 py-2"
+        style={{
+          border: `2.5px solid ${PALETTE.ink}`,
+          boxShadow: `0 3px 0 ${PALETTE.ink}`,
+        }}
+      >
+        {REACTION_EMOJI.map((e) => (
+          <button
+            key={e}
+            type="button"
+            onClick={() => onPick(e)}
+            aria-label={`React ${e}`}
+            className="grid place-items-center text-2xl"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 99,
+              background: mineEmoji === e ? PALETTE.blush : "transparent",
+              cursor: "pointer",
+            }}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -393,6 +556,10 @@ function ChatBubbleImpl({
   senderName,
   senderTone,
   onImageClick,
+  reactions,
+  myUserId,
+  onReact,
+  onOpenPicker,
 }: {
   msg: Message;
   prev?: Message;
@@ -400,7 +567,53 @@ function ChatBubbleImpl({
   senderName: string;
   senderTone: import("@/lib/utils").PaletteColor;
   onImageClick: (url: string) => void;
+  reactions: MessageReaction[];
+  myUserId: string;
+  onReact: (messageId: string, emoji: string) => void;
+  onOpenPicker: (messageId: string) => void;
 }) {
+  const lastTapRef = useRef(0);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+
+  const startLongPress = useCallback(() => {
+    longPressFired.current = false;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      onOpenPicker(msg.id);
+    }, 450);
+  }, [msg.id, onOpenPicker]);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const handleTap = useCallback(() => {
+    if (longPressFired.current) return;
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      onReact(msg.id, DEFAULT_REACTION);
+      lastTapRef.current = 0;
+    } else {
+      lastTapRef.current = now;
+    }
+  }, [msg.id, onReact]);
+
+  const counts = useMemo(() => {
+    const m = new Map<string, { count: number; mine: boolean }>();
+    for (const r of reactions) {
+      const cur = m.get(r.emoji) ?? { count: 0, mine: false };
+      cur.count++;
+      if (r.user_id === myUserId) cur.mine = true;
+      m.set(r.emoji, cur);
+    }
+    return Array.from(m.entries());
+  }, [reactions, myUserId]);
+
   const consecutive =
     !!prev &&
     prev.sender_id === msg.sender_id &&
@@ -430,10 +643,18 @@ function ChatBubbleImpl({
       {msg.image_url ? (
         <button
           type="button"
-          onClick={() => onImageClick(msg.image_url!)}
+          onClick={() => {
+            if (longPressFired.current) return;
+            onImageClick(msg.image_url!);
+          }}
+          onPointerDown={startLongPress}
+          onPointerUp={cancelLongPress}
+          onPointerLeave={cancelLongPress}
+          onPointerCancel={cancelLongPress}
+          onContextMenu={(e) => e.preventDefault()}
           aria-label="View photo full screen"
           className="block p-0"
-          style={{ cursor: "pointer", background: "none", border: "none" }}
+          style={{ cursor: "pointer", background: "none", border: "none", touchAction: "manipulation" }}
         >
           <img
             src={msg.image_url}
@@ -452,6 +673,12 @@ function ChatBubbleImpl({
         </button>
       ) : (
         <div
+          onClick={handleTap}
+          onPointerDown={startLongPress}
+          onPointerUp={cancelLongPress}
+          onPointerLeave={cancelLongPress}
+          onPointerCancel={cancelLongPress}
+          onContextMenu={(e) => e.preventDefault()}
           className="text-sm font-semibold"
           style={{
             background: bubbleBg,
@@ -462,9 +689,42 @@ function ChatBubbleImpl({
             boxShadow: `0 2px 0 ${PALETTE.ink}`,
             wordBreak: "break-word",
             lineHeight: 1.35,
+            cursor: "pointer",
+            userSelect: "none",
+            touchAction: "manipulation",
           }}
         >
           {msg.content}
+        </div>
+      )}
+      {counts.length > 0 && (
+        <div
+          className="flex flex-wrap gap-1"
+          style={{ marginTop: 2, paddingLeft: isMe ? 0 : 6, paddingRight: isMe ? 6 : 0 }}
+        >
+          {counts.map(([emoji, info]) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => onReact(msg.id, emoji)}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={`Toggle reaction ${emoji}`}
+              className="font-display flex items-center gap-1 text-xs"
+              style={{
+                background: info.mine ? PALETTE.blush : "#fff",
+                color: info.mine ? "#fff" : PALETTE.ink,
+                border: `2px solid ${PALETTE.ink}`,
+                boxShadow: `0 1.5px 0 ${PALETTE.ink}`,
+                borderRadius: 99,
+                padding: "1px 8px",
+                cursor: "pointer",
+                lineHeight: 1.2,
+              }}
+            >
+              <span style={{ fontSize: 14 }}>{emoji}</span>
+              {info.count > 1 && <span>{info.count}</span>}
+            </button>
+          ))}
         </div>
       )}
     </div>
@@ -479,6 +739,9 @@ const ChatBubble = memo(ChatBubbleImpl, (a, b) => {
     a.isMe === b.isMe &&
     a.senderName === b.senderName &&
     a.senderTone === b.senderTone &&
+    a.reactions === b.reactions &&
+    a.myUserId === b.myUserId &&
+    a.onReact === b.onReact &&
     a.onImageClick === b.onImageClick
   );
 });

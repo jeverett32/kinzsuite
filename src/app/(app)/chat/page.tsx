@@ -18,10 +18,15 @@ export default async function ChatPage() {
     supabase.from("profiles").select("*"),
   ]);
   const initialMessages = (messages ?? []).slice().reverse();
+  const ids = initialMessages.map((m) => m.id);
+  const { data: reactions } = ids.length
+    ? await supabase.from("message_reactions").select("*").in("message_id", ids)
+    : { data: [] as never[] };
 
   return (
     <ChatView
       initialMessages={initialMessages}
+      initialReactions={reactions ?? []}
       userId={session!.user.id}
       profiles={profiles ?? []}
     />

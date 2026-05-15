@@ -174,6 +174,23 @@ export type Database = {
         };
         Relationships: [];
       };
+      message_reactions: {
+        Row: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+          created_at: string;
+        };
+        Insert: {
+          message_id: string;
+          user_id: string;
+          emoji: string;
+        };
+        Update: {
+          emoji?: string;
+        };
+        Relationships: [];
+      };
       push_subscriptions: {
         Row: {
           id: string;
@@ -214,6 +231,7 @@ export type Pet = Database["public"]["Tables"]["pets"]["Row"];
 export type DailyTask = Database["public"]["Tables"]["daily_tasks"]["Row"];
 export type DailyLog = Database["public"]["Tables"]["daily_log"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type MessageReaction = Database["public"]["Tables"]["message_reactions"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type WheelQuest = Database["public"]["Tables"]["wheel_quests"]["Row"];
 export type DateWheelPick = Database["public"]["Tables"]["date_wheel_pick"]["Row"];
