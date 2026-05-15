@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Plus, Send, Heart } from "lucide-react";
+import { Camera, Plus, Send, Heart, X } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
 import { useChatUnread } from "@/components/shell/ChatUnreadContext";
@@ -27,6 +27,7 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const [sending, setSending] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(initialMessages.length >= PAGE_SIZE);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -181,6 +182,7 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
                 isMe={m.sender_id === userId}
                 senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
                 senderTone={sender?.accent_color ?? "sky"}
+                onImageClick={setLightboxUrl}
               />
             );
           })}
@@ -214,6 +216,60 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
           if (f) void uploadImage(f);
           e.target.value = "";
         }}
+      />
+
+      {lightboxUrl && (
+        <ChatImageLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />
+      )}
+    </div>
+  );
+}
+
+function ChatImageLightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.92)" }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Photo preview"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Close"
+        className="absolute grid h-10 w-10 place-items-center rounded-full"
+        style={{
+          top: "max(1rem, env(safe-area-inset-top))",
+          right: "max(1rem, env(safe-area-inset-right))",
+          background: "#fff",
+          border: `2px solid ${PALETTE.ink}`,
+          boxShadow: `0 2px 0 ${PALETTE.ink}`,
+          color: PALETTE.ink,
+          zIndex: 1,
+        }}
+      >
+        <X size={20} />
+      </button>
+      <img
+        src={url}
+        alt=""
+        className="max-h-full max-w-full object-contain"
+        style={{ maxHeight: "calc(100dvh - 2rem)", maxWidth: "100%" }}
+        onClick={(e) => e.stopPropagation()}
       />
     </div>
   );
@@ -333,12 +389,14 @@ function ChatBubbleImpl({
   isMe,
   senderName,
   senderTone,
+  onImageClick,
 }: {
   msg: Message;
   prev?: Message;
   isMe: boolean;
   senderName: string;
   senderTone: import("@/lib/utils").PaletteColor;
+  onImageClick: (url: string) => void;
 }) {
   const consecutive =
     !!prev &&
@@ -367,20 +425,28 @@ function ChatBubbleImpl({
         </div>
       )}
       {msg.image_url ? (
-        <img
-          src={msg.image_url}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          className="max-w-[220px]"
-          style={{
-            display: "block",
-            height: "auto",
-            borderRadius: 18,
-            border: `3px solid ${PALETTE.ink}`,
-            boxShadow: `0 3px 0 ${PALETTE.ink}`,
-          }}
-        />
+        <button
+          type="button"
+          onClick={() => onImageClick(msg.image_url!)}
+          aria-label="View photo full screen"
+          className="block p-0"
+          style={{ cursor: "pointer", background: "none", border: "none" }}
+        >
+          <img
+            src={msg.image_url}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="max-w-[220px]"
+            style={{
+              display: "block",
+              height: "auto",
+              borderRadius: 18,
+              border: `3px solid ${PALETTE.ink}`,
+              boxShadow: `0 3px 0 ${PALETTE.ink}`,
+            }}
+          />
+        </button>
       ) : (
         <div
           className="text-sm font-semibold"
@@ -409,6 +475,7 @@ const ChatBubble = memo(ChatBubbleImpl, (a, b) => {
     a.prev?.id === b.prev?.id &&
     a.isMe === b.isMe &&
     a.senderName === b.senderName &&
-    a.senderTone === b.senderTone
+    a.senderTone === b.senderTone &&
+    a.onImageClick === b.onImageClick
   );
 });
