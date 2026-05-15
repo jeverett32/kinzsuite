@@ -301,9 +301,10 @@ function Wheel({
 type Props = {
   initialWheelQuests: WheelQuest[];
   initialAcceptedQuestId: string | null;
+  activeGroupId: string | null;
 };
 
-export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) {
+export function DateView({ initialWheelQuests, initialAcceptedQuestId, activeGroupId }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [quests, setQuests] = useState<Quest[]>(() => toQuestList(initialWheelQuests));
   const questsRef = useRef(quests);
@@ -325,16 +326,30 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
 
   useEffect(() => {
     void (async () => {
-      const { data } = await supabase.from("date_wheel_pick").select("accepted_quest_id").eq("id", 1).maybeSingle();
+      const query = activeGroupId
+        ? supabase
+            .from("date_wheel_pick")
+            .select("accepted_quest_id")
+            .eq("group_id", activeGroupId)
+            .maybeSingle()
+        : supabase
+            .from("date_wheel_pick")
+            .select("accepted_quest_id")
+            .is("group_id", null)
+            .maybeSingle();
+      const { data } = await query;
       if (data && "accepted_quest_id" in data) {
         setAcceptedQuestId(data.accepted_quest_id ?? null);
       }
     })();
-  }, [supabase]);
+  }, [supabase, activeGroupId]);
 
   useEffect(() => {
     async function reload() {
-      const { data } = await supabase.from("wheel_quests").select("*").order("sort_order");
+      const query = activeGroupId
+        ? supabase.from("wheel_quests").select("*").eq("group_id", activeGroupId).order("sort_order")
+        : supabase.from("wheel_quests").select("*").is("group_id", null).order("sort_order");
+      const { data } = await query;
       setQuests(toQuestList(data ?? []));
     }
 
@@ -342,7 +357,12 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
       .channel("wheel_quests")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "wheel_quests" },
+        {
+          event: "*",
+          schema: "public",
+          table: "wheel_quests",
+          filter: activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null",
+        },
         () => {
           void reload();
         },
@@ -352,14 +372,19 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, activeGroupId]);
 
   useEffect(() => {
     const channel = supabase
       .channel("date_wheel_pick")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "date_wheel_pick", filter: "id=eq.1" },
+        {
+          event: "*",
+          schema: "public",
+          table: "date_wheel_pick",
+          filter: activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null",
+        },
         (payload) => {
           const row = payload.new as { accepted_quest_id?: string | null } | undefined;
           if (row && "accepted_quest_id" in row) {
@@ -377,7 +402,7 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, activeGroupId]);
 
   useEffect(() => {
     setQuestIdx((i) => Math.min(i, Math.max(0, quests.length - 1)));
@@ -414,13 +439,15 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
     if (!canPersist || !pendingQuest.id) return;
     setAccepting(true);
     setAcceptErr(null);
-    const { error } = await supabase
+    const update = supabase
       .from("date_wheel_pick")
       .update({
         accepted_quest_id: pendingQuest.id,
         updated_at: new Date().toISOString(),
-      })
-      .eq("id", 1);
+      });
+    const { error } = activeGroupId
+      ? await update.eq("group_id", activeGroupId)
+      : await update.is("group_id", null);
     setAccepting(false);
     if (error) {
       setAcceptErr(error.message);

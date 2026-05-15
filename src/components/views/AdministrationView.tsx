@@ -27,11 +27,12 @@ type Props = {
   userId: string;
   initialTasks: DailyTask[];
   initialQuests: WheelQuest[];
+  activeGroupId: string | null;
 };
 
 type Tab = "tasks" | "quests";
 
-export function AdministrationView({ userId, initialTasks, initialQuests }: Props) {
+export function AdministrationView({ userId, initialTasks, initialQuests, activeGroupId }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const today = todayIso();
 
@@ -80,7 +81,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
   async function saveTaskFromDraft(d: DailyTask) {
     setErr(null);
     const lockedPoints = d.completed_at === today;
-    const { error } = await supabase
+    const taskUpdate = supabase
       .from("daily_tasks")
       .update({
         task_name: d.task_name,
@@ -89,6 +90,9 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       })
       .eq("id", d.id)
       .eq("user_id", userId);
+    const { error } = activeGroupId
+      ? await taskUpdate.eq("group_id", activeGroupId)
+      : await taskUpdate.is("group_id", null);
     if (error) {
       flashErr(error);
       return;
@@ -107,7 +111,10 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       return;
     }
     setErr(null);
-    const { error } = await supabase.from("daily_tasks").delete().eq("id", t.id).eq("user_id", userId);
+    const taskDelete = supabase.from("daily_tasks").delete().eq("id", t.id).eq("user_id", userId);
+    const { error } = activeGroupId
+      ? await taskDelete.eq("group_id", activeGroupId)
+      : await taskDelete.is("group_id", null);
     if (error) {
       flashErr(error);
       return;
@@ -124,6 +131,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
       .from("daily_tasks")
       .insert({
         user_id: userId,
+        group_id: activeGroupId,
         task_name: "New task",
         points: 1,
         sort_order: maxSort + 1,
@@ -144,7 +152,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
   async function saveQuestFromDraft(d: WheelQuest) {
     setErr(null);
     const sort_order = Math.max(0, Math.min(WHEEL_SLICE_COUNT - 1, d.sort_order));
-    const { error } = await supabase
+    const questUpdate = supabase
       .from("wheel_quests")
       .update({
         tag: d.tag,
@@ -154,6 +162,9 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
         sort_order,
       })
       .eq("id", d.id);
+    const { error } = activeGroupId
+      ? await questUpdate.eq("group_id", activeGroupId)
+      : await questUpdate.is("group_id", null);
     if (error) {
       flashErr(error);
       return;

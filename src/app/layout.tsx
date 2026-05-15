@@ -33,8 +33,8 @@ const SUPABASE_ORIGIN = (() => {
 })();
 
 export const metadata: Metadata = {
-  title: "KinzSuite — pet companion for two",
-  description: "A cozy shared world for you, your partner, and your pets.",
+  title: "KinzSuite — cozy group world",
+  description: "A cozy shared world for you, your group, and your pets.",
   applicationName: "KinzSuite",
   icons: {
     icon: [

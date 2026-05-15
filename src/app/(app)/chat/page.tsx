@@ -1,21 +1,38 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAllProfiles, getSession } from "@/lib/supabase/cached";
+import { getSession } from "@/lib/supabase/cached";
+import { getActiveGroupContext, getCurrentProfile } from "@/lib/groups";
 import { ChatView } from "@/components/views/ChatView";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChatPage() {
   const supabase = createClient();
-  const [session, profiles, messagesRes] = await Promise.all([
+  const [session, profile, groupContext] = await Promise.all([
     getSession(),
-    getAllProfiles(),
-    supabase
-      .from("messages")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(30),
+    getCurrentProfile(),
+    getActiveGroupContext(),
   ]);
-  const initialMessages = (messagesRes.data ?? []).slice().reverse();
+  const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
+  const members = groupContext?.members.length
+    ? groupContext.members.map((member) => member.profile)
+    : profile
+      ? [profile]
+      : [];
+  const messagesQuery = activeGroupId
+    ? supabase
+        .from("messages")
+        .select("*")
+        .eq("group_id", activeGroupId)
+        .order("created_at", { ascending: false })
+        .limit(30)
+    : supabase
+        .from("messages")
+        .select("*")
+        .is("group_id", null)
+        .order("created_at", { ascending: false })
+        .limit(30);
+  const { data: messages } = await messagesQuery;
+  const initialMessages = (messages ?? []).slice().reverse();
   const ids = initialMessages.map((m) => m.id);
   const { data: reactions } = ids.length
     ? await supabase.from("message_reactions").select("*").in("message_id", ids)
@@ -26,7 +43,8 @@ export default async function ChatPage() {
       initialMessages={initialMessages}
       initialReactions={reactions ?? []}
       userId={session!.user.id}
-      profiles={profiles}
+      activeGroupId={activeGroupId}
+      members={members}
     />
   );
 }

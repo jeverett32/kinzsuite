@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Flame, Sparkles, Coins, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
-import { PartnerToggle } from "@/components/ui/PartnerToggle";
+import { MemberPillStrip } from "@/components/ui/MemberPillStrip";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import type { DailyTask, DailyLog, Profile } from "@/lib/supabase/types";
@@ -11,8 +11,9 @@ import type { DailyTask, DailyLog, Profile } from "@/lib/supabase/types";
 type Props = {
   initialTasks: DailyTask[];
   initialLog: DailyLog[];
-  initialProfiles: Profile[];
+  members: Profile[];
   userId: string;
+  activeGroupId: string | null;
 };
 
 const todayIso = () => {
@@ -42,20 +43,20 @@ function computeStreak(logs: DailyLog[]): number {
   return streak;
 }
 
-export function TodayView({ initialTasks, initialLog, initialProfiles, userId }: Props) {
+export function TodayView({ initialTasks, initialLog, members, userId, activeGroupId }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [tasks, setTasks] = useState<DailyTask[]>(initialTasks);
   const [log, setLog] = useState<DailyLog[]>(initialLog);
-  const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
-  const [side, setSide] = useState<"me" | "partner">("me");
+  const [selectedUserId, setSelectedUserId] = useState(userId);
 
   // Realtime: daily_tasks, daily_log, profiles
   useEffect(() => {
+    const filter = activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null";
     const channel = supabase
       .channel("today")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "daily_tasks" },
+        { event: "*", schema: "public", table: "daily_tasks", filter },
         (payload) => {
           setTasks((cur) => {
             if (payload.eventType === "INSERT") return [...cur, payload.new as DailyTask];
@@ -87,23 +88,12 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
           });
         },
       )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "profiles" },
-        (payload) => {
-          setProfiles((cur) =>
-            cur.map((p) =>
-              p.id === (payload.new as Profile).id ? (payload.new as Profile) : p,
-            ),
-          );
-        },
-      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase]);
+  }, [supabase, activeGroupId]);
 
   // Clear yesterday's checkmarks client-side (server's nightly cron also
   // does this if enabled).
@@ -122,20 +112,20 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const me = profiles.find((p) => p.id === userId) ?? null;
-  const partner = profiles.find((p) => p.id !== userId) ?? null;
-  const meName = me?.display_name || "You";
-  const partnerName = partner?.display_name || "Partner";
+  useEffect(() => {
+    if (!members.some((member) => member.id === selectedUserId)) {
+      setSelectedUserId(userId);
+    }
+  }, [members, selectedUserId, userId]);
 
-  const viewedUserId = side === "me" ? me?.id : partner?.id;
-  const viewedProfile = side === "me" ? me : partner;
+  const viewedProfile = members.find((p) => p.id === selectedUserId) ?? null;
 
   const viewedTasks = useMemo(
     () =>
       tasks
-        .filter((t) => t.user_id === viewedUserId)
+        .filter((t) => t.user_id === selectedUserId)
         .sort((a, b) => a.sort_order - b.sort_order),
-    [tasks, viewedUserId],
+    [tasks, selectedUserId],
   );
 
   const today = todayIso();
@@ -143,12 +133,11 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
   const pointsToday = done.reduce((s, t) => s + t.points, 0);
   const possibleToday = viewedTasks.reduce((s, t) => s + t.points, 0);
   const streak = useMemo(
-    () => computeStreak(log.filter((l) => l.user_id === viewedUserId)),
-    [log, viewedUserId],
+    () => computeStreak(log.filter((l) => l.user_id === selectedUserId)),
+    [log, selectedUserId],
   );
   const totalPoints = viewedProfile?.total_points ?? 0;
 
-  const isMine = side === "me";
   const headerLabel = format(new Date(), "EEEE · MMM d");
 
   async function toggle(task: DailyTask) {
@@ -194,16 +183,15 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
       </div>
 
       <div className="px-4 pb-3.5">
-        <PartnerToggle
-          value={side}
-          onChange={setSide}
-          meName={meName}
-          partnerName={partnerName}
-          noun="tasks"
-          meTone={me?.accent_color ?? "sky"}
-          partnerTone={partner?.accent_color ?? "blush"}
-        />
-      </div>
+          <MemberPillStrip
+            members={members.map((member) => ({
+              profile: member,
+              label: member.id === userId ? "You" : member.display_name || "Member",
+            }))}
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+          />
+        </div>
 
       <div className="grid grid-cols-3 gap-2.5 px-4 pb-3.5">
         <Stat label="STREAK" value={`${streak}d`} color={PALETTE.sun} Icon={Flame} />
@@ -262,17 +250,17 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
           </div>
 
           <div className="flex flex-col">
-            {viewedTasks.length === 0 && (
-              <div
-                className="font-hand py-6 text-center text-base"
-                style={{ color: PALETTE.ink, opacity: 0.55 }}
-              >
-                no tasks yet
-              </div>
-            )}
+              {viewedTasks.length === 0 && (
+                <div
+                  className="font-hand py-6 text-center text-base"
+                  style={{ color: PALETTE.ink, opacity: 0.55 }}
+                >
+                {selectedUserId === userId ? "no tasks yet" : "no tasks to show right now"}
+                </div>
+              )}
             {viewedTasks.map((t, i) => {
               const isDone = t.completed_at === today;
-              const interactive = isMine;
+              const interactive = selectedUserId === userId;
               return (
                 <button
                   key={t.id}
@@ -329,16 +317,16 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
         </div>
       </div>
 
-      {!isMine && (
-        <div className="px-4">
-          <div
-            className="font-hand text-center text-base"
-            style={{ color: PALETTE.ink, opacity: 0.55 }}
-          >
-            you can&apos;t check off {partnerName}&apos;s tasks — only they can
+        {selectedUserId !== userId && (
+          <div className="px-4">
+            <div
+              className="font-hand text-center text-base"
+              style={{ color: PALETTE.ink, opacity: 0.55 }}
+            >
+              you can&apos;t check off another member&apos;s tasks — only they can
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

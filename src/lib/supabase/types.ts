@@ -3,6 +3,74 @@ export type AccentColor = "sky" | "blush" | "sun" | "grass" | "purple";
 export type Database = {
   public: {
     Tables: {
+      groups: {
+        Row: {
+          id: string;
+          name: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_by: string;
+          created_at?: string;
+        };
+        Update: {
+          name?: string;
+          created_by?: string;
+        };
+        Relationships: [];
+      };
+      group_members: {
+        Row: {
+          group_id: string;
+          user_id: string;
+          role: "owner" | "member";
+          joined_at: string;
+          sort_order: number;
+        };
+        Insert: {
+          group_id: string;
+          user_id: string;
+          role?: "owner" | "member";
+          joined_at?: string;
+          sort_order?: number;
+        };
+        Update: {
+          role?: "owner" | "member";
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
+      group_invites: {
+        Row: {
+          code: string;
+          group_id: string;
+          created_by: string;
+          expires_at: string | null;
+          revoked_at: string | null;
+          uses_remaining: number | null;
+          created_at: string;
+        };
+        Insert: {
+          code?: string;
+          group_id: string;
+          created_by: string;
+          expires_at?: string | null;
+          revoked_at?: string | null;
+          uses_remaining?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          group_id?: string;
+          created_by?: string;
+          expires_at?: string | null;
+          revoked_at?: string | null;
+          uses_remaining?: number | null;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           id: string;
@@ -12,6 +80,7 @@ export type Database = {
           avatar_emoji: string;
           total_points: number;
           chat_last_read_at: string | null;
+          active_group_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -22,6 +91,7 @@ export type Database = {
           avatar_emoji?: string;
           total_points?: number;
           chat_last_read_at?: string | null;
+          active_group_id?: string | null;
         };
         Update: {
           display_name?: string | null;
@@ -30,6 +100,7 @@ export type Database = {
           avatar_emoji?: string;
           total_points?: number;
           chat_last_read_at?: string | null;
+          active_group_id?: string | null;
         };
         Relationships: [];
       };
@@ -69,6 +140,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string;
+          group_id: string | null;
           task_name: string;
           points: number;
           completed_at: string | null;
@@ -78,12 +150,14 @@ export type Database = {
         Insert: {
           id?: string;
           user_id: string;
+          group_id?: string | null;
           task_name: string;
           points?: number;
           completed_at?: string | null;
           sort_order?: number;
         };
         Update: {
+          group_id?: string | null;
           task_name?: string;
           points?: number;
           completed_at?: string | null;
@@ -113,6 +187,7 @@ export type Database = {
       wheel_quests: {
         Row: {
           id: string;
+          group_id: string | null;
           tag: string;
           title: string;
           detail: string;
@@ -122,6 +197,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
+          group_id?: string | null;
           tag: string;
           title: string;
           detail: string;
@@ -129,6 +205,7 @@ export type Database = {
           sort_order?: number;
         };
         Update: {
+          group_id?: string | null;
           tag?: string;
           title?: string;
           detail?: string;
@@ -141,15 +218,18 @@ export type Database = {
         Row: {
           id: number;
           accepted_quest_id: string | null;
+          group_id: string | null;
           updated_at: string;
         };
         Insert: {
           id: number;
           accepted_quest_id?: string | null;
+          group_id?: string | null;
           updated_at?: string;
         };
         Update: {
           accepted_quest_id?: string | null;
+          group_id?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -158,6 +238,7 @@ export type Database = {
         Row: {
           id: string;
           sender_id: string;
+          group_id: string | null;
           content: string | null;
           image_url: string | null;
           created_at: string;
@@ -165,10 +246,12 @@ export type Database = {
         Insert: {
           id?: string;
           sender_id: string;
+          group_id?: string | null;
           content?: string | null;
           image_url?: string | null;
         };
         Update: {
+          group_id?: string | null;
           content?: string | null;
           image_url?: string | null;
         };
@@ -214,12 +297,61 @@ export type Database = {
         };
         Relationships: [];
       };
+      chat_last_read: {
+        Row: {
+          user_id: string;
+          group_id: string | null;
+          last_read_at: string;
+        };
+        Insert: {
+          user_id: string;
+          group_id?: string | null;
+          last_read_at?: string;
+        };
+        Update: {
+          group_id?: string | null;
+          last_read_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
       toggle_daily_task: {
         Args: { task_id: string };
         Returns: void;
+      };
+      current_active_group: {
+        Args: Record<string, never>;
+        Returns: string | null;
+      };
+      is_group_member: {
+        Args: { gid: string };
+        Returns: boolean;
+      };
+      get_group_members: {
+        Args: { gid: string };
+        Returns: {
+          user_id: string;
+          role: "owner" | "member";
+          sort_order: number;
+          joined_at: string;
+        }[];
+      };
+      generate_invite_code: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      create_group: {
+        Args: { p_name: string };
+        Returns: {
+          group_id: string;
+          invite_code: string;
+        }[];
+      };
+      join_group_by_code: {
+        Args: { p_code: string };
+        Returns: string;
       };
     };
     Enums: { [_ in never]: never };

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "KinzSuite",
     short_name: "KinzSuite",
-    description: "A cozy shared world for you, your partner, and your pets.",
+    description: "A cozy shared world for you, your group, and your pets.",
     start_url: "/",
     display: "standalone",
     background_color: "#3FB8E8",

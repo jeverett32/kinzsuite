@@ -27,10 +27,12 @@ export function useChatUnread() {
 
 export function ChatUnreadProvider({
   userId,
+  activeGroupId,
   initialHasUnread,
   children,
 }: {
   userId: string;
+  activeGroupId: string | null;
   initialHasUnread: boolean;
   children: React.ReactNode;
 }) {
@@ -40,19 +42,33 @@ export function ChatUnreadProvider({
 
   const markChatRead = useCallback(async () => {
     const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ chat_last_read_at: now })
-      .eq("id", userId);
+    const deleteQuery = supabase
+      .from("chat_last_read")
+      .delete()
+      .eq("user_id", userId);
+    const { error: deleteError } = activeGroupId
+      ? await deleteQuery.eq("group_id", activeGroupId)
+      : await deleteQuery.is("group_id", null);
+    if (deleteError) return;
+    const { error } = await supabase.from("chat_last_read").insert({
+      user_id: userId,
+      group_id: activeGroupId,
+      last_read_at: now,
+    });
     if (!error) setHasUnreadChat(false);
-  }, [supabase, userId]);
+  }, [supabase, userId, activeGroupId]);
 
   useEffect(() => {
+    setHasUnreadChat(initialHasUnread);
+  }, [activeGroupId, initialHasUnread]);
+
+  useEffect(() => {
+    const filter = activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null";
     const channel = supabase
       .channel("chat-unread-messages")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        { event: "INSERT", schema: "public", table: "messages", filter },
         (payload) => {
           const row = payload.new as Message;
           if (row.sender_id === userId) return;
@@ -64,7 +80,7 @@ export function ChatUnreadProvider({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, userId, pathname]);
+  }, [supabase, userId, pathname, activeGroupId]);
 
   const value = useMemo(
     () => ({ hasUnreadChat, markChatRead }),

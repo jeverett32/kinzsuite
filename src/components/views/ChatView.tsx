@@ -17,7 +17,8 @@ type Props = {
   initialMessages: Message[];
   initialReactions: MessageReaction[];
   userId: string;
-  profiles: Profile[];
+  activeGroupId: string | null;
+  members: Profile[];
 };
 
 const PAGE_SIZE = 30;
@@ -33,7 +34,7 @@ type PickerState = {
   isMe: boolean;
 };
 
-export function ChatView({ initialMessages, initialReactions, userId, profiles }: Props) {
+export function ChatView({ initialMessages, initialReactions, userId, activeGroupId, members }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const { markChatRead } = useChatUnread();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -76,14 +77,11 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
     [messages, userId],
   );
 
-  const partner = useMemo(() => profiles.find((p) => p.id !== userId), [profiles, userId]);
-  const partnerName = partner?.display_name || "Partner";
-
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
-    profiles.forEach((p) => m.set(p.id, p));
+    members.forEach((p) => m.set(p.id, p));
     return m;
-  }, [profiles]);
+  }, [members]);
 
   useEffect(() => {
     void markChatRead();
@@ -94,11 +92,12 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
   }, [reactions]);
 
   useEffect(() => {
+    const filter = activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null";
     const channel = supabase
       .channel("messages")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages" },
+        { event: "INSERT", schema: "public", table: "messages", filter },
         (payload) => {
           const next = payload.new as Message;
           setMessages((cur) => {
@@ -138,7 +137,7 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, userId, markChatRead]);
+  }, [supabase, userId, markChatRead, activeGroupId]);
 
   const toggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
@@ -176,10 +175,18 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
     if (loadingOlder || !hasMore || messages.length === 0) return;
     setLoadingOlder(true);
     const oldest = messages[0].created_at;
-    const { data } = await supabase
-      .from("messages")
-      .select("*")
-      .lt("created_at", oldest)
+    const messagesQuery = activeGroupId
+      ? supabase
+          .from("messages")
+          .select("*")
+          .eq("group_id", activeGroupId)
+          .lt("created_at", oldest)
+      : supabase
+          .from("messages")
+          .select("*")
+          .is("group_id", null)
+          .lt("created_at", oldest);
+    const { data } = await messagesQuery
       .order("created_at", { ascending: false })
       .limit(PAGE_SIZE);
     const older = (data ?? []).slice().reverse();
@@ -206,7 +213,7 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
     }
     if ((data?.length ?? 0) < PAGE_SIZE) setHasMore(false);
     setLoadingOlder(false);
-  }, [supabase, messages, loadingOlder, hasMore]);
+  }, [supabase, messages, loadingOlder, hasMore, activeGroupId]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -227,11 +234,11 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
       setSending(true);
       const { error } = await supabase
         .from("messages")
-        .insert({ sender_id: userId, content: text });
+        .insert({ sender_id: userId, group_id: activeGroupId, content: text });
       setSending(false);
       return !error;
     },
-    [supabase, userId, sending],
+    [supabase, userId, sending, activeGroupId],
   );
 
   const uploadImage = useCallback(
@@ -252,10 +259,10 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
       const { data } = supabase.storage.from("chat-images").getPublicUrl(path);
       await supabase
         .from("messages")
-        .insert({ sender_id: userId, image_url: data.publicUrl });
+        .insert({ sender_id: userId, group_id: activeGroupId, image_url: data.publicUrl });
       setSending(false);
     },
-    [supabase, userId],
+    [supabase, userId, activeGroupId],
   );
 
   return (
@@ -273,8 +280,8 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
             }}
           >
             <Avatar
-              emoji={partner?.avatar_emoji ?? "🙂"}
-              color={partner?.accent_color ?? "blush"}
+              emoji={members[0]?.avatar_emoji ?? "🙂"}
+              color={members[0]?.accent_color ?? "blush"}
               size={42}
               border={false}
               halo={false}
@@ -286,7 +293,7 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
             className="font-display flex items-center gap-1.5 text-xl leading-none"
             style={{ color: PALETTE.ink }}
           >
-            {partnerName.toUpperCase()}
+            {members.length > 1 ? "GROUP CHAT" : "CHAT"}
             <Heart size={14} color={PALETTE.blush} fill={PALETTE.blush} />
           </div>
         </div>
@@ -311,7 +318,7 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
                   msg={m}
                   prev={messages[i - 1]}
                   isMe={m.sender_id === userId}
-                  senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
+                  senderName={m.sender_id === userId ? "You" : sender?.display_name || "Member"}
                   senderTone={sender?.accent_color ?? "sky"}
                   onImageClick={setLightboxUrl}
                   reactions={reactions.get(m.id) ?? EMPTY_REACTIONS}
@@ -337,7 +344,7 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
       </div>
 
       <Composer
-        partnerName={partnerName}
+        groupLabel={members.length > 1 ? `${members.length} members` : "chat"}
         sending={sending}
         sendText={sendText}
         onPickFile={() => fileRef.current?.click()}
@@ -540,12 +547,12 @@ function ChatImageLightbox({ url, onClose }: { url: string; onClose: () => void 
 }
 
 function ComposerImpl({
-  partnerName,
+  groupLabel,
   sending,
   sendText,
   onPickFile,
 }: {
-  partnerName: string;
+  groupLabel: string;
   sending: boolean;
   sendText: (text: string) => Promise<boolean>;
   onPickFile: () => void;
@@ -619,7 +626,7 @@ function ComposerImpl({
           ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Message ${partnerName}…`}
+          placeholder={`Message ${groupLabel}…`}
           className="font-body min-w-0 flex-1 bg-transparent px-1.5 py-2 text-sm font-medium outline-none"
           style={{ color: PALETTE.ink }}
         />

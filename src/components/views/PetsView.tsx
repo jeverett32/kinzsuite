@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, X, Upload } from "lucide-react";
 import { PolaroidCard } from "@/components/ui/PolaroidCard";
-import { PartnerToggle } from "@/components/ui/PartnerToggle";
+import { MemberPillStrip } from "@/components/ui/MemberPillStrip";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { PetPortrait } from "@/components/ui/PetPortrait";
 import { createClient } from "@/lib/supabase/client";
@@ -14,8 +14,8 @@ import type { Pet, Profile } from "@/lib/supabase/types";
 type Props = {
   initialPets: Pet[];
   userId: string;
-  me: Profile | null;
-  partner: Profile | null;
+  members: Profile[];
+  activeGroupId: string | null;
 };
 
 const GENDER_OPTIONS = [
@@ -25,10 +25,10 @@ const GENDER_OPTIONS = [
   { value: "unknown", label: "Unknown" },
 ] as const;
 
-export function PetsView({ initialPets, userId, me, partner }: Props) {
+export function PetsView({ initialPets, userId, members }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [pets, setPets] = useState<Pet[]>(initialPets);
-  const [side, setSide] = useState<"me" | "partner">("me");
+  const [selectedUserId, setSelectedUserId] = useState(userId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
 
@@ -55,17 +55,17 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
     };
   }, [supabase]);
 
-  const myName = me?.display_name || "You";
-  const partnerName = partner?.display_name || "Partner";
+  useEffect(() => {
+    if (!members.some((member) => member.id === selectedUserId)) {
+      setSelectedUserId(userId);
+    }
+  }, [members, selectedUserId, userId]);
 
-  const visiblePets =
-    side === "me"
-      ? pets.filter((p) => p.owner_id === userId)
-      : pets.filter((p) => p.owner_id !== userId);
-  const hiddenPets =
-    side === "me"
-      ? pets.filter((p) => p.owner_id !== userId)
-      : pets.filter((p) => p.owner_id === userId);
+  const selectedProfile = members.find((p) => p.id === selectedUserId) ?? null;
+  const selectedName = selectedProfile?.display_name || "You";
+
+  const visiblePets = pets.filter((p) => p.owner_id === selectedUserId);
+  const hiddenPets = pets.filter((p) => p.owner_id !== selectedUserId);
 
   // Warm the browser cache (and SW) with the inactive side's first images so a
   // toggle swap paints instantly instead of waiting on a network round-trip.
@@ -92,18 +92,18 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
           className="font-hand text-[44px] leading-none text-white"
           style={{ textShadow: `0 3px 0 ${PALETTE.ink}, 0 0 12px rgba(0,0,0,0.15)` }}
         >
-          Hey, {myName}!
+          Hey, {selectedName}!
         </div>
       </div>
 
       <div className="px-4 pb-3.5">
-        <PartnerToggle
-          value={side}
-          onChange={setSide}
-          meName={myName}
-          partnerName={partnerName}
-          meTone={me?.accent_color ?? "sky"}
-          partnerTone={partner?.accent_color ?? "blush"}
+        <MemberPillStrip
+          members={members.map((member) => ({
+            profile: member,
+            label: member.id === userId ? "You" : member.display_name || "Member",
+          }))}
+          value={selectedUserId}
+          onChange={setSelectedUserId}
         />
       </div>
 
@@ -137,11 +137,11 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
             </div>
           ))}
 
-          {side === "me" && (
+          {selectedUserId === userId && (
             <button
               onClick={() => setShowNew(true)}
               className="kz-polaroid-card kz-sticker flex shrink-0 flex-col items-center justify-center gap-3.5"
-              style={{
+            style={{
                 ["--ink" as any]: PALETTE.ink,
                 width: 280,
                 minHeight: 380,

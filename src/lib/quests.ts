@@ -17,7 +17,7 @@ export const STATIC_QUESTS_FALLBACK: Quest[] = [
   { tag: "Adventure", title: "Hike to a spot you've never visited", detail: "Take a polaroid for the gallery.", accent: "sky" },
   { tag: "Cozy", title: "Build a blanket fort and pick a movie", detail: "Loser of rock-paper-scissors picks snacks.", accent: "blush" },
   { tag: "Music", title: "Slow dance to one full song", detail: "No phones. Eye contact required.", accent: "sun" },
-  { tag: "Quest", title: "Trade three pet outfits with each other", detail: "Style your partner's pet for tomorrow.", accent: "grass" },
+  { tag: "Quest", title: "Trade three pet outfits with each other", detail: "Style another member's pet for tomorrow.", accent: "grass" },
   { tag: "Travel", title: "Plan a 24-hr surprise trip on paper", detail: "Reveal at breakfast on Saturday.", accent: "sky" },
 ];
 
