@@ -7,18 +7,6 @@
 
 begin;
 
-create schema if not exists _rls_test;
-
-create or replace function _rls_test.set_auth(p_uid uuid)
-returns void
-language plpgsql
-as $$
-begin
-  perform set_config('request.jwt.claims', json_build_object('sub', p_uid)::text, true);
-  execute 'set local role authenticated';
-end;
-$$;
-
 do $$
 declare
   inst   uuid := '00000000-0000-0000-0000-000000000000';
@@ -78,7 +66,8 @@ begin
   values (pet_a, uid_a, 'Fluffy');
 
   -- B cannot SELECT G2 messages
-  perform _rls_test.set_auth(uid_b);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_b)::text, true);
+  execute 'set local role authenticated';
   select count(*) into n from public.messages where group_id = g2;
   if n <> 0 then
     raise exception 'FAIL: B should not SELECT G2 messages (got %)', n;
@@ -90,7 +79,8 @@ begin
   end if;
 
   -- C cannot UPDATE A's task in G1
-  perform _rls_test.set_auth(uid_c);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_c)::text, true);
+  execute 'set local role authenticated';
   update public.daily_tasks set task_name = 'hacked' where id = task_a_g1;
   get diagnostics n = row_count;
   if n > 0 then
@@ -98,7 +88,8 @@ begin
   end if;
 
   -- Active group: app filters by profiles.active_group_id
-  perform _rls_test.set_auth(uid_a);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_a)::text, true);
+  execute 'set local role authenticated';
   update public.profiles set active_group_id = g1 where id = uid_a;
 
   select count(*) into n
@@ -140,7 +131,8 @@ begin
   end if;
 
   -- Pets: owner-only SELECT (0019) and owner-only mutations (0001)
-  perform _rls_test.set_auth(uid_b);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_b)::text, true);
+  execute 'set local role authenticated';
   select count(*) into n from public.pets where id = pet_a;
   if n <> 0 then
     raise exception 'FAIL: B should not SELECT A pet (got %)', n;
@@ -157,13 +149,15 @@ begin
     raise exception 'FAIL: B should not UPDATE A pet';
   end if;
 
-  perform _rls_test.set_auth(uid_a);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_a)::text, true);
+  execute 'set local role authenticated';
   select count(*) into n from public.pets where owner_id = uid_a;
   if n <> 1 then
     raise exception 'FAIL: A should see own pet (got %)', n;
   end if;
 
-  perform _rls_test.set_auth(uid_b);
+  perform set_config('request.jwt.claims', json_build_object('sub', uid_b)::text, true);
+  execute 'set local role authenticated';
   delete from public.pets where id = pet_a;
   get diagnostics n = row_count;
   if n > 0 then
@@ -175,6 +169,3 @@ end;
 $$;
 
 rollback;
-
-drop function if exists _rls_test.set_auth(uuid);
-drop schema if exists _rls_test cascade;

@@ -20,6 +20,8 @@ Success prints `PASS: all cutover helper tests succeeded`.
 - The backfill helper is guarded against a second run.
 - `join_group_by_code(...)` switches the caller's active group to the joined group.
 - `leave_group(...)` cleans unread rows, switches to a remaining group, and blocks the last owner from orphaning a group.
+- The test resets the affected public tables inside a transaction so it can run against an already cut-over branch DB.
+- `chat_last_read.group_id` is handled according to the live column nullability on the target database.
 
 ## RLS group tests (`rls_groups.sql`)
 
