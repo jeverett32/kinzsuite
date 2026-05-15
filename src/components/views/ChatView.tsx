@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import { ChatPushNotificationsBar } from "@/components/chat/ChatPushNotificationsBar";
 import { resizeImage } from "@/lib/image";
-import { transformUrl } from "@/lib/supabase/imageUrl";
 import type { Message, Profile } from "@/lib/supabase/types";
 
 type Props = {
@@ -369,7 +368,7 @@ function ChatBubbleImpl({
       )}
       {msg.image_url ? (
         <img
-          src={transformUrl(msg.image_url, { width: 440, quality: 70, resize: "cover" })}
+          src={msg.image_url}
           alt=""
           width={220}
           height={220}
