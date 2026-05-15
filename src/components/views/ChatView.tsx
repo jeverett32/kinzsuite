@@ -302,7 +302,11 @@ export function ChatView({ initialMessages, initialReactions, userId, profiles }
           {messages.map((m, i) => {
             const sender = profileById.get(m.sender_id);
             return (
-              <div key={m.id} className="kz-chat-row">
+              <div
+                key={m.id}
+                className="kz-chat-row flex w-full"
+                style={{ justifyContent: m.sender_id === userId ? "flex-end" : "flex-start" }}
+              >
                 <ChatBubble
                   msg={m}
                   prev={messages[i - 1]}
