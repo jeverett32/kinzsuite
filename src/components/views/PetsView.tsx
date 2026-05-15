@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, X, Upload } from "lucide-react";
 import { PolaroidCard } from "@/components/ui/PolaroidCard";
 import { MemberPillStrip } from "@/components/ui/MemberPillStrip";
+import { PartnerToggle } from "@/components/ui/PartnerToggle";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { PetPortrait } from "@/components/ui/PetPortrait";
 import { createClient } from "@/lib/supabase/client";
@@ -29,8 +30,10 @@ export function PetsView({ initialPets, userId, members }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [pets, setPets] = useState<Pet[]>(initialPets);
   const [selectedUserId, setSelectedUserId] = useState(userId);
+  const [side, setSide] = useState<"me" | "partner">("me");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
+  const isDuo = members.length === 2;
 
   useEffect(() => {
     const channel = supabase
@@ -56,16 +59,21 @@ export function PetsView({ initialPets, userId, members }: Props) {
   }, [supabase]);
 
   useEffect(() => {
-    if (!members.some((member) => member.id === selectedUserId)) {
+    if (!isDuo && !members.some((member) => member.id === selectedUserId)) {
       setSelectedUserId(userId);
     }
-  }, [members, selectedUserId, userId]);
+  }, [members, selectedUserId, userId, isDuo]);
 
-  const selectedProfile = members.find((p) => p.id === selectedUserId) ?? null;
-  const selectedName = selectedProfile?.display_name || "You";
+  const me = members.find((p) => p.id === userId) ?? null;
+  const partner = members.find((p) => p.id !== userId) ?? null;
+  const meName = me?.display_name || "You";
+  const partnerName = partner?.display_name || "Partner";
+  const viewedUserId = isDuo ? (side === "me" ? userId : partner?.id) : selectedUserId;
+  const selectedProfile = members.find((p) => p.id === viewedUserId) ?? null;
+  const greetingName = isDuo ? meName : selectedProfile?.display_name || "You";
 
-  const visiblePets = pets.filter((p) => p.owner_id === selectedUserId);
-  const hiddenPets = pets.filter((p) => p.owner_id !== selectedUserId);
+  const visiblePets = pets.filter((p) => p.owner_id === viewedUserId);
+  const hiddenPets = pets.filter((p) => p.owner_id !== viewedUserId);
 
   // Warm the browser cache (and SW) with the inactive side's first images so a
   // toggle swap paints instantly instead of waiting on a network round-trip.
@@ -92,19 +100,30 @@ export function PetsView({ initialPets, userId, members }: Props) {
           className="font-hand text-[44px] leading-none text-white"
           style={{ textShadow: `0 3px 0 ${PALETTE.ink}, 0 0 12px rgba(0,0,0,0.15)` }}
         >
-          Hey, {selectedName}!
+          Hey, {greetingName}!
         </div>
       </div>
 
       <div className="px-4 pb-3.5">
-        <MemberPillStrip
-          members={members.map((member) => ({
-            profile: member,
-            label: member.id === userId ? "You" : member.display_name || "Member",
-          }))}
-          value={selectedUserId}
-          onChange={setSelectedUserId}
-        />
+        {isDuo ? (
+          <PartnerToggle
+            value={side}
+            onChange={setSide}
+            meName={meName}
+            partnerName={partnerName}
+            meTone={me?.accent_color ?? "sky"}
+            partnerTone={partner?.accent_color ?? "blush"}
+          />
+        ) : (
+          <MemberPillStrip
+            members={members.map((member) => ({
+              profile: member,
+              label: member.id === userId ? "You" : member.display_name || "Member",
+            }))}
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+          />
+        )}
       </div>
 
       <div className="min-h-0 min-w-0 flex-1">
@@ -137,7 +156,7 @@ export function PetsView({ initialPets, userId, members }: Props) {
             </div>
           ))}
 
-          {selectedUserId === userId && (
+          {viewedUserId === userId && (
             <button
               onClick={() => setShowNew(true)}
               className="kz-polaroid-card kz-sticker flex shrink-0 flex-col items-center justify-center gap-3.5"

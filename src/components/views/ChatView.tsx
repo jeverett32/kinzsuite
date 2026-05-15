@@ -77,6 +77,10 @@ export function ChatView({ initialMessages, initialReactions, userId, activeGrou
     [messages, userId],
   );
 
+  const isDuo = members.length === 2;
+  const partner = useMemo(() => members.find((p) => p.id !== userId) ?? null, [members, userId]);
+  const partnerName = partner?.display_name || "Partner";
+
   const profileById = useMemo(() => {
     const m = new Map<string, Profile>();
     members.forEach((p) => m.set(p.id, p));
@@ -280,8 +284,8 @@ export function ChatView({ initialMessages, initialReactions, userId, activeGrou
             }}
           >
             <Avatar
-              emoji={members[0]?.avatar_emoji ?? "🙂"}
-              color={members[0]?.accent_color ?? "blush"}
+              emoji={(isDuo ? partner : members[0])?.avatar_emoji ?? "🙂"}
+              color={(isDuo ? partner : members[0])?.accent_color ?? "blush"}
               size={42}
               border={false}
               halo={false}
@@ -293,7 +297,7 @@ export function ChatView({ initialMessages, initialReactions, userId, activeGrou
             className="font-display flex items-center gap-1.5 text-xl leading-none"
             style={{ color: PALETTE.ink }}
           >
-            {members.length > 1 ? "GROUP CHAT" : "CHAT"}
+            {isDuo ? partnerName.toUpperCase() : members.length > 2 ? "GROUP CHAT" : "CHAT"}
             <Heart size={14} color={PALETTE.blush} fill={PALETTE.blush} />
           </div>
         </div>
@@ -344,7 +348,9 @@ export function ChatView({ initialMessages, initialReactions, userId, activeGrou
       </div>
 
       <Composer
-        groupLabel={members.length > 1 ? `${members.length} members` : "chat"}
+        groupLabel={
+          isDuo ? partnerName : members.length > 2 ? `${members.length} members` : "chat"
+        }
         sending={sending}
         sendText={sendText}
         onPickFile={() => fileRef.current?.click()}

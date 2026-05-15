@@ -1,12 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile, getActiveGroupContext } from "@/lib/groups";
+import { getCurrentProfile, getActiveGroupContext, getUserGroups } from "@/lib/groups";
 import { AdministrationView } from "@/components/views/AdministrationView";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdministrationPage() {
   const supabase = createClient();
-  const [profile, groupContext] = await Promise.all([getCurrentProfile(), getActiveGroupContext()]);
+  const [profile, groupContext, initialGroups] = await Promise.all([
+    getCurrentProfile(),
+    getActiveGroupContext(),
+    getUserGroups(),
+  ]);
   const userId = profile?.id ?? (await supabase.auth.getSession()).data.session!.user.id;
   const activeGroupId = groupContext?.activeGroupId ?? profile?.active_group_id ?? null;
   const tasksQuery = activeGroupId
@@ -22,6 +26,7 @@ export default async function AdministrationPage() {
       userId={userId}
       initialTasks={tasks ?? []}
       initialQuests={quests ?? []}
+      initialGroups={initialGroups}
       activeGroupId={activeGroupId}
     />
   );

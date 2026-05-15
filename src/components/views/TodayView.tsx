@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Flame, Sparkles, Coins, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { MemberPillStrip } from "@/components/ui/MemberPillStrip";
+import { PartnerToggle } from "@/components/ui/PartnerToggle";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import type { DailyTask, DailyLog, Profile } from "@/lib/supabase/types";
@@ -48,6 +49,8 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
   const [tasks, setTasks] = useState<DailyTask[]>(initialTasks);
   const [log, setLog] = useState<DailyLog[]>(initialLog);
   const [selectedUserId, setSelectedUserId] = useState(userId);
+  const [side, setSide] = useState<"me" | "partner">("me");
+  const isDuo = members.length === 2;
 
   // Realtime: daily_tasks, daily_log, profiles
   useEffect(() => {
@@ -113,19 +116,24 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
   }, []);
 
   useEffect(() => {
-    if (!members.some((member) => member.id === selectedUserId)) {
+    if (!isDuo && !members.some((member) => member.id === selectedUserId)) {
       setSelectedUserId(userId);
     }
-  }, [members, selectedUserId, userId]);
+  }, [members, selectedUserId, userId, isDuo]);
 
-  const viewedProfile = members.find((p) => p.id === selectedUserId) ?? null;
+  const me = members.find((p) => p.id === userId) ?? null;
+  const partner = members.find((p) => p.id !== userId) ?? null;
+  const meName = me?.display_name || "You";
+  const partnerName = partner?.display_name || "Partner";
+  const viewedUserId = isDuo ? (side === "me" ? userId : partner?.id) : selectedUserId;
+  const viewedProfile = members.find((p) => p.id === viewedUserId) ?? null;
 
   const viewedTasks = useMemo(
     () =>
       tasks
-        .filter((t) => t.user_id === selectedUserId)
+        .filter((t) => t.user_id === viewedUserId)
         .sort((a, b) => a.sort_order - b.sort_order),
-    [tasks, selectedUserId],
+    [tasks, viewedUserId],
   );
 
   const today = todayIso();
@@ -133,8 +141,8 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
   const pointsToday = done.reduce((s, t) => s + t.points, 0);
   const possibleToday = viewedTasks.reduce((s, t) => s + t.points, 0);
   const streak = useMemo(
-    () => computeStreak(log.filter((l) => l.user_id === selectedUserId)),
-    [log, selectedUserId],
+    () => computeStreak(log.filter((l) => l.user_id === viewedUserId)),
+    [log, viewedUserId],
   );
   const totalPoints = viewedProfile?.total_points ?? 0;
 
@@ -183,6 +191,17 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
       </div>
 
       <div className="px-4 pb-3.5">
+        {isDuo ? (
+          <PartnerToggle
+            value={side}
+            onChange={setSide}
+            meName={meName}
+            partnerName={partnerName}
+            noun="tasks"
+            meTone={me?.accent_color ?? "sky"}
+            partnerTone={partner?.accent_color ?? "blush"}
+          />
+        ) : (
           <MemberPillStrip
             members={members.map((member) => ({
               profile: member,
@@ -191,7 +210,8 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
             value={selectedUserId}
             onChange={setSelectedUserId}
           />
-        </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-3 gap-2.5 px-4 pb-3.5">
         <Stat label="STREAK" value={`${streak}d`} color={PALETTE.sun} Icon={Flame} />
@@ -255,12 +275,12 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
                   className="font-hand py-6 text-center text-base"
                   style={{ color: PALETTE.ink, opacity: 0.55 }}
                 >
-                {selectedUserId === userId ? "no tasks yet" : "no tasks to show right now"}
+                {viewedUserId === userId ? "no tasks yet" : "no tasks to show right now"}
                 </div>
               )}
             {viewedTasks.map((t, i) => {
               const isDone = t.completed_at === today;
-              const interactive = selectedUserId === userId;
+              const interactive = viewedUserId === userId;
               return (
                 <button
                   key={t.id}
@@ -317,13 +337,15 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
         </div>
       </div>
 
-        {selectedUserId !== userId && (
+        {viewedUserId !== userId && (
           <div className="px-4">
             <div
               className="font-hand text-center text-base"
               style={{ color: PALETTE.ink, opacity: 0.55 }}
             >
-              you can&apos;t check off another member&apos;s tasks — only they can
+              {isDuo
+                ? `you can't check off ${partnerName}'s tasks — only they can`
+                : "you can't check off another member's tasks — only they can"}
             </div>
           </div>
         )}
