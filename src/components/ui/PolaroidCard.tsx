@@ -15,6 +15,12 @@ function formatGender(gender: string | null) {
   return gender;
 }
 
+function petCardBackground(gender: string | null) {
+  if (gender === "boy") return "#C5E4FF";
+  if (gender === "girl") return "#FFD6E8";
+  return "#ffffff";
+}
+
 export function PolaroidCard({
   pet,
   active,
@@ -63,6 +69,7 @@ export function PolaroidCard({
         textAlign: "left",
         cursor: "pointer",
         flexShrink: 0,
+        background: petCardBackground(pet.gender),
         transition: wiggling ? undefined : "transform .25s cubic-bezier(.34,1.56,.64,1)",
       }}
     >
