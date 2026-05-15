@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./public/icon.png" alt="KinzSuite" width="120" height="120" />
+<img src="./public/icon.png.from-a42f7310c03f2d49b1f5a94f476f6908b60cef86.png" alt="KinzSuite" width="120" height="120" />
 
 # KinzSuite
 
