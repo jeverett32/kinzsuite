@@ -287,20 +287,29 @@ function ComposerImpl({
   onPickFile: () => void;
 }) {
   const [draft, setDraft] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const trimmed = draft.trim();
   const canSend = !!trimmed && !sending;
 
-  async function send() {
+  async function send(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!canSend) return;
     const text = trimmed;
     setDraft("");
+    
+    // Attempt to maintain focus immediately so keyboard stays up
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+    
     const ok = await sendText(text);
     if (!ok) setDraft(text);
   }
 
   return (
     <div className="flex-shrink-0 px-3.5 pt-1.5 pb-[max(env(safe-area-inset-bottom),14px)]">
-      <div
+      <form
+        onSubmit={send}
         className="flex items-center gap-1 rounded-full bg-white p-1"
         style={{
           border: `2.5px solid ${PALETTE.ink}`,
@@ -343,21 +352,15 @@ function ComposerImpl({
           <Camera size={18} strokeWidth={2.2} />
         </button>
         <input
+          ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void send();
-            }
-          }}
           placeholder={`Message ${partnerName}…`}
           className="font-body min-w-0 flex-1 bg-transparent px-1.5 py-2 text-sm font-medium outline-none"
           style={{ color: PALETTE.ink }}
         />
         <button
-          type="button"
-          onClick={() => void send()}
+          type="submit"
           disabled={!canSend}
           aria-label="Send"
           className="grid place-items-center"
@@ -377,7 +380,7 @@ function ComposerImpl({
         >
           <Send size={16} strokeWidth={2.6} />
         </button>
-      </div>
+      </form>
     </div>
   );
 }
