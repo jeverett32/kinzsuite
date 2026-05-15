@@ -1,19 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { Cake } from "lucide-react";
 import { format } from "date-fns";
 import { PALETTE } from "@/lib/utils";
 import { PetPortrait } from "./PetPortrait";
 import type { Pet } from "@/lib/supabase/types";
-
-function formatGender(gender: string | null) {
-  if (!gender) return null;
-  if (gender === "boy") return "Boy";
-  if (gender === "girl") return "Girl";
-  if (gender === "unknown") return "Unknown";
-  return gender;
-}
 
 function petCardBackground(gender: string | null) {
   if (gender === "boy") return "#C5E4FF";
@@ -30,8 +21,10 @@ export function PolaroidCard({
   active?: boolean;
   onClick?: () => void;
 }) {
-  const gender = formatGender(pet.gender);
   const [wiggling, setWiggling] = useState(false);
+  const birthdayLabel = pet.birthday
+    ? format(new Date(pet.birthday), "MMM dd, yyyy")
+    : "No birthday";
 
   const handleClick = useCallback(() => {
     setWiggling((playing) => {
@@ -79,33 +72,24 @@ export function PolaroidCard({
         rounded={22}
         imageUrl={pet.image_url}
       />
-      <div className="mt-3">
+      <div className="mt-3 flex flex-col gap-1" style={{ color: PALETTE.ink }}>
         <div
-          className="font-display"
-          style={{ fontSize: 30, color: PALETTE.ink, letterSpacing: -0.2, lineHeight: 1 }}
+          className="font-display truncate"
+          style={{ fontSize: 30, letterSpacing: -0.2, lineHeight: 1.1, minHeight: 33 }}
         >
           {pet.name}
         </div>
         <div
-          className="mt-2 flex items-center gap-1.5 text-sm font-semibold opacity-70"
-          style={{ color: PALETTE.ink }}
+          className="truncate text-sm font-semibold opacity-70"
+          style={{ lineHeight: 1.25, minHeight: 18 }}
         >
-          <Cake size={14} strokeWidth={2.4} />
-          <span>
-            {pet.birthday ? format(new Date(pet.birthday), "MMM dd, yyyy") : "no birthday"}
-          </span>
-          {pet.species && (
-            <>
-              <span className="h-[3px] w-[3px] rounded-full bg-current" />
-              <span>{pet.species}</span>
-            </>
-          )}
-          {gender && (
-            <>
-              <span className="h-[3px] w-[3px] rounded-full bg-current" />
-              <span>{gender}</span>
-            </>
-          )}
+          {pet.species || "—"}
+        </div>
+        <div
+          className="truncate text-sm font-semibold opacity-70"
+          style={{ lineHeight: 1.25, minHeight: 18 }}
+        >
+          {birthdayLabel}
         </div>
       </div>
     </div>
