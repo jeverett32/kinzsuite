@@ -353,6 +353,18 @@ export type Database = {
         Args: { p_code: string };
         Returns: string;
       };
+      leave_group: {
+        Args: { p_group_id: string };
+        Returns: string | null;
+      };
+      backfill_legacy_group: {
+        Args: {
+          p_group_name: string;
+          p_owner_user_id: string;
+          p_member_user_ids: string[];
+        };
+        Returns: string;
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

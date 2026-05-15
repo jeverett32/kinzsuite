@@ -44,14 +44,19 @@ export function ProfileSheet({
 
   const loadGroups = useCallback(async () => {
     const [{ data: memberships }, { data: profile }] = await Promise.all([
-      supabase.from("group_members").select("group_id").eq("user_id", userId),
+      supabase
+        .from("group_members")
+        .select("group_id, sort_order")
+        .eq("user_id", userId)
+        .order("sort_order", { ascending: true }),
       supabase.from("profiles").select("active_group_id").eq("id", userId).maybeSingle(),
     ]);
     const ids = [...new Set((memberships ?? []).map((row) => row.group_id))];
     const { data: groupRows } = ids.length
       ? await supabase.from("groups").select("id, name").in("id", ids)
       : { data: [] as { id: string; name: string }[] };
-    setGroups(groupRows ?? []);
+    const groupById = new Map((groupRows ?? []).map((row) => [row.id, row]));
+    setGroups(ids.map((id) => groupById.get(id)).filter((row): row is { id: string; name: string } => Boolean(row)));
     setActiveGroupId(profile?.active_group_id ?? null);
   }, [supabase, userId]);
 
@@ -116,10 +121,7 @@ export function ProfileSheet({
   async function leaveGroup(groupId: string) {
     setGroupBusy(true);
     setGroupStatus(null);
-    const { error } = await supabase.from("group_members").delete().eq("group_id", groupId).eq("user_id", userId);
-    if (!error && activeGroupId === groupId) {
-      await supabase.from("profiles").update({ active_group_id: null }).eq("id", userId);
-    }
+    const { error } = await supabase.rpc("leave_group", { p_group_id: groupId });
     setGroupBusy(false);
     if (error) {
       setGroupStatus(error.message);
