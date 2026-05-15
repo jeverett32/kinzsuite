@@ -49,12 +49,14 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
   const [tasks, setTasks] = useState<DailyTask[]>(initialTasks);
   const [log, setLog] = useState<DailyLog[]>(initialLog);
   const [selectedUserId, setSelectedUserId] = useState(userId);
-  const [side, setSide] = useState<"me" | "partner">("me");
-  const isDuo = members.length === 2;
 
   // Realtime: daily_tasks, daily_log, profiles
   useEffect(() => {
-    const filter = activeGroupId ? `group_id=eq.${activeGroupId}` : "group_id=is.null";
+    // In Solo Mode (activeGroupId = null), we listen for our own records
+    const filter = activeGroupId 
+      ? `group_id=eq.${activeGroupId}` 
+      : `user_id=eq.${userId}`;
+    
     const channel = supabase
       .channel("today")
       .on(
@@ -73,7 +75,13 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "daily_log" },
+        { 
+          event: "*", 
+          schema: "public", 
+          table: "daily_log",
+          // daily_log doesn't have group_id yet, so we filter by userId if in solo mode
+          filter: activeGroupId ? undefined : `user_id=eq.${userId}`
+        },
         (payload) => {
           setLog((cur) => {
             if (payload.eventType === "DELETE") {
@@ -96,10 +104,9 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, activeGroupId]);
+  }, [supabase, activeGroupId, userId]);
 
-  // Clear yesterday's checkmarks client-side (server's nightly cron also
-  // does this if enabled).
+  // Clear yesterday's checkmarks client-side
   useEffect(() => {
     const today = todayIso();
     const stale = tasks.filter((t) => t.completed_at && t.completed_at !== today);
@@ -112,21 +119,17 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
           stale.filter((t) => t.user_id === userId).map((t) => t.id),
         );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase, userId, tasks]);
 
   useEffect(() => {
-    if (!isDuo && !members.some((member) => member.id === selectedUserId)) {
+    if (!members.some((member) => member.id === selectedUserId)) {
       setSelectedUserId(userId);
     }
-  }, [members, selectedUserId, userId, isDuo]);
+  }, [members, selectedUserId, userId]);
 
-  const me = members.find((p) => p.id === userId) ?? null;
-  const partner = members.find((p) => p.id !== userId) ?? null;
-  const meName = me?.display_name || "You";
-  const partnerName = partner?.display_name || "Partner";
-  const viewedUserId = isDuo ? (side === "me" ? userId : partner?.id) : selectedUserId;
+  const viewedUserId = selectedUserId;
   const viewedProfile = members.find((p) => p.id === viewedUserId) ?? null;
+  const viewedName = viewedUserId === userId ? "you" : viewedProfile?.display_name || "Member";
 
   const viewedTasks = useMemo(
     () =>
@@ -191,26 +194,14 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
       </div>
 
       <div className="px-4 pb-3.5">
-        {isDuo ? (
-          <PartnerToggle
-            value={side}
-            onChange={setSide}
-            meName={meName}
-            partnerName={partnerName}
-            noun="tasks"
-            meTone={me?.accent_color ?? "sky"}
-            partnerTone={partner?.accent_color ?? "blush"}
-          />
-        ) : (
-          <MemberPillStrip
-            members={members.map((member) => ({
-              profile: member,
-              label: member.id === userId ? "You" : member.display_name || "Member",
-            }))}
-            value={selectedUserId}
-            onChange={setSelectedUserId}
-          />
-        )}
+        <MemberPillStrip
+          members={members.map((member) => ({
+            profile: member,
+            label: member.id === userId ? "You" : member.display_name || "Member",
+          }))}
+          value={selectedUserId}
+          onChange={setSelectedUserId}
+        />
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 px-4 pb-3.5">
@@ -343,9 +334,7 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
               className="font-hand text-center text-base"
               style={{ color: PALETTE.ink, opacity: 0.55 }}
             >
-              {isDuo
-                ? `you can't check off ${partnerName}'s tasks — only they can`
-                : "you can't check off another member's tasks — only they can"}
+              {`you can't check off ${viewedName}'s tasks — only they can`}
             </div>
           </div>
         )}

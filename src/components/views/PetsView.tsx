@@ -30,12 +30,12 @@ export function PetsView({ initialPets, userId, members }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [pets, setPets] = useState<Pet[]>(initialPets);
   const [selectedUserId, setSelectedUserId] = useState(userId);
-  const [side, setSide] = useState<"me" | "partner">("me");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showNew, setShowNew] = useState(false);
-  const isDuo = members.length === 2;
 
   useEffect(() => {
+    // We listen for all pets because RLS will handle the visibility, 
+    // but we could filter by owner_id if we want to be more specific.
     const channel = supabase
       .channel("pets")
       .on(
@@ -59,18 +59,14 @@ export function PetsView({ initialPets, userId, members }: Props) {
   }, [supabase]);
 
   useEffect(() => {
-    if (!isDuo && !members.some((member) => member.id === selectedUserId)) {
+    if (!members.some((member) => member.id === selectedUserId)) {
       setSelectedUserId(userId);
     }
-  }, [members, selectedUserId, userId, isDuo]);
+  }, [members, selectedUserId, userId]);
 
-  const me = members.find((p) => p.id === userId) ?? null;
-  const partner = members.find((p) => p.id !== userId) ?? null;
-  const meName = me?.display_name || "You";
-  const partnerName = partner?.display_name || "Partner";
-  const viewedUserId = isDuo ? (side === "me" ? userId : partner?.id) : selectedUserId;
-  const selectedProfile = members.find((p) => p.id === viewedUserId) ?? null;
-  const greetingName = isDuo ? meName : selectedProfile?.display_name || "You";
+  const viewedUserId = selectedUserId;
+  const viewedProfile = members.find((p) => p.id === viewedUserId) ?? null;
+  const greetingName = viewedUserId === userId ? "You" : viewedProfile?.display_name || "Member";
 
   const visiblePets = pets.filter((p) => p.owner_id === viewedUserId);
   const hiddenPets = pets.filter((p) => p.owner_id !== viewedUserId);
@@ -105,25 +101,14 @@ export function PetsView({ initialPets, userId, members }: Props) {
       </div>
 
       <div className="px-4 pb-3.5">
-        {isDuo ? (
-          <PartnerToggle
-            value={side}
-            onChange={setSide}
-            meName={meName}
-            partnerName={partnerName}
-            meTone={me?.accent_color ?? "sky"}
-            partnerTone={partner?.accent_color ?? "blush"}
-          />
-        ) : (
-          <MemberPillStrip
-            members={members.map((member) => ({
-              profile: member,
-              label: member.id === userId ? "You" : member.display_name || "Member",
-            }))}
-            value={selectedUserId}
-            onChange={setSelectedUserId}
-          />
-        )}
+        <MemberPillStrip
+          members={members.map((member) => ({
+            profile: member,
+            label: member.id === userId ? "You" : member.display_name || "Member",
+          }))}
+          value={selectedUserId}
+          onChange={setSelectedUserId}
+        />
       </div>
 
       <div className="min-h-0 min-w-0 flex-1">
