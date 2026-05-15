@@ -67,3 +67,11 @@ grant execute on function public.toggle_daily_task(uuid, text) to authenticated;
 -- Cleanup incorrect logs before May 15, 2026
 delete from public.daily_log where log_date < '2026-05-15';
 update public.daily_tasks set completed_at = null where completed_at < '2026-05-15';
+
+-- Sync total_points with remaining logs
+update public.profiles p
+set total_points = coalesce((
+  select sum(points_earned)
+  from public.daily_log l
+  where l.user_id = p.id
+), 0);
