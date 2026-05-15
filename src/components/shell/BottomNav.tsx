@@ -15,7 +15,7 @@ type Tab = {
 const TABS: Tab[] = [
   { href: "/",      label: "Today", icon: CheckSquare, tone: "grass" },
   { href: "/pets",  label: "Pets",  icon: PawPrint,    tone: "sky" },
-  { href: "/date",  label: "Date",  icon: Heart,       tone: "blush" },
+  { href: "/date",  label: "Wheel", icon: Heart,       tone: "blush" },
 ];
 
 export function BottomNav() {

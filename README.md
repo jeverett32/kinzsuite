@@ -26,7 +26,7 @@ A shared daily checklist that both of you can see and check off in real-time. Pe
 ### 🐾 **Pets**
 Create a polaroid-style photo gallery of memories together. Upload photos, pick from 8 adorable pet species, and build a digital scrapbook that only you two can see.
 
-### 🎡 **Date**
+### 🎡 **Wheel**
 Can't decide what to do tonight? Spin the wheel to get a random date idea, from cozy at-home activities to adventurous outings. Let chance help break the decision paralysis.
 
 ### 💬 **Chat**
