@@ -174,6 +174,9 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
     }
   }
 
+  const isDuo = members.length === 2;
+  const partner = members.find((m) => m.id !== userId);
+
   return (
     <div className="kz-hscroll h-full overflow-y-auto pb-6">
       <div className="flex items-end justify-between gap-2.5 px-4 pb-3 pt-1">
@@ -194,14 +197,26 @@ export function TodayView({ initialTasks, initialLog, members, userId, activeGro
       </div>
 
       <div className="px-4 pb-3.5">
-        <MemberPillStrip
-          members={members.map((member) => ({
-            profile: member,
-            label: member.id === userId ? "You" : member.display_name || "Member",
-          }))}
-          value={selectedUserId}
-          onChange={setSelectedUserId}
-        />
+        {isDuo ? (
+          <PartnerToggle
+            value={selectedUserId === userId ? "me" : "partner"}
+            onChange={(v) => setSelectedUserId(v === "me" ? userId : partner!.id)}
+            meName="Your"
+            partnerName={partner!.display_name || "Partner"}
+            noun="quests"
+            meTone="grass"
+            partnerTone="blush"
+          />
+        ) : (
+          <MemberPillStrip
+            members={members.map((member) => ({
+              profile: member,
+              label: member.id === userId ? "You" : member.display_name || "Member",
+            }))}
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 px-4 pb-3.5">

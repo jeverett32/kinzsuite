@@ -89,6 +89,9 @@ export function PetsView({ initialPets, userId, members }: Props) {
     return () => window.clearTimeout(handle);
   }, [hiddenPets]);
 
+  const isDuo = members.length === 2;
+  const partner = members.find((m) => m.id !== userId);
+
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden pb-6">
       <div className="px-4 pb-3 pt-2">
@@ -101,14 +104,26 @@ export function PetsView({ initialPets, userId, members }: Props) {
       </div>
 
       <div className="px-4 pb-3.5">
-        <MemberPillStrip
-          members={members.map((member) => ({
-            profile: member,
-            label: member.id === userId ? "You" : member.display_name || "Member",
-          }))}
-          value={selectedUserId}
-          onChange={setSelectedUserId}
-        />
+        {isDuo ? (
+          <PartnerToggle
+            value={selectedUserId === userId ? "me" : "partner"}
+            onChange={(v) => setSelectedUserId(v === "me" ? userId : partner!.id)}
+            meName="Your"
+            partnerName={partner!.display_name || "Partner"}
+            noun="pets"
+            meTone="sky"
+            partnerTone="blush"
+          />
+        ) : (
+          <MemberPillStrip
+            members={members.map((member) => ({
+              profile: member,
+              label: member.id === userId ? "You" : member.display_name || "Member",
+            }))}
+            value={selectedUserId}
+            onChange={setSelectedUserId}
+          />
+        )}
       </div>
 
       <div className="min-h-0 min-w-0 flex-1">
