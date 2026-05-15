@@ -24,33 +24,14 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const partner = profiles.find((p) => p.id !== userId);
   const partnerName = partner?.display_name || "Partner";
 
-  const scrollToBottom = (behavior: ScrollBehavior = "instant") => {
-    // Small delay to allow layout to settle
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
-    }, 50);
-  };
-
   useEffect(() => {
     void markChatRead();
   }, [markChatRead]);
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => {
-      scrollToBottom();
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -144,9 +125,9 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
 
       <div
         ref={scrollerRef}
-        className="kz-hscroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3.5 pb-2 pt-1.5"
+        className="kz-hscroll flex min-h-0 flex-1 flex-col-reverse gap-1.5 overflow-y-auto px-3.5 pb-2 pt-1.5"
       >
-        <div ref={contentRef} className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5">
           {messages.map((m, i) => {
             const sender = profiles.find((p) => p.id === m.sender_id);
             return (
@@ -161,7 +142,6 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
             );
           })}
         </div>
-        <div ref={messagesEndRef} className="h-0" />
         {messages.length === 0 && (
           <div className="font-hand mx-auto mt-10 text-center text-lg" style={{ color: PALETTE.ink, opacity: 0.5 }}>
             no messages yet — say hi!
