@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Camera, Plus, Send, Heart, X } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
@@ -20,7 +21,7 @@ type Props = {
 };
 
 const PAGE_SIZE = 30;
-const REACTION_EMOJI = ["❤️", "😂", "😮", "😢", "👍", "🔥"] as const;
+const REACTION_EMOJI = ["❤️", "😂", "😮", "😢", "👍", "🔥", "💀"] as const;
 const DEFAULT_REACTION = "❤️";
 const EMPTY_REACTIONS: MessageReaction[] = [];
 
@@ -401,10 +402,10 @@ function ChatImageLightbox({ url, onClose }: { url: string; onClose: () => void 
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.92)" }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.88)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -434,7 +435,8 @@ function ChatImageLightbox({ url, onClose }: { url: string; onClose: () => void 
         style={{ maxHeight: "calc(100dvh - 2rem)", maxWidth: "100%" }}
         onClick={(e) => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }
 
