@@ -21,6 +21,10 @@ const TABS: Tab[] = [
 export function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === "/chat" || pathname.startsWith("/chat/")) {
+    return null;
+  }
+
   return (
     <nav
       className="z-40 flex flex-shrink-0 justify-around gap-1 px-2.5 pt-2.5 pb-[max(env(safe-area-inset-bottom),14px)]"

@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { PALETTE, PET_TYPES } from "@/lib/utils";
+import { transformUrl } from "@/lib/supabase/imageUrl";
 
 type Props = {
   art?: number;
@@ -42,8 +43,18 @@ export function PetPortrait({
     >
       {imageUrl ? (
         <img
-          src={imageUrl}
+          src={
+            imageUrl.startsWith("blob:") || imageUrl.startsWith("data:")
+              ? imageUrl
+              : transformUrl(imageUrl, {
+                  width: Math.round(size * 2),
+                  quality: 75,
+                  resize: "cover",
+                })
+          }
           alt=""
+          loading="lazy"
+          decoding="async"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
       ) : (

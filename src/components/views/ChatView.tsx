@@ -1,7 +1,7 @@
 "use client";
 
+/* eslint-disable @next/next/no-img-element */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { Camera, Plus, Send, Heart } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,6 +9,8 @@ import { useChatUnread } from "@/components/shell/ChatUnreadContext";
 import { createClient } from "@/lib/supabase/client";
 import { PALETTE, shade } from "@/lib/utils";
 import { ChatPushNotificationsBar } from "@/components/chat/ChatPushNotificationsBar";
+import { resizeImage } from "@/lib/image";
+import { transformUrl } from "@/lib/supabase/imageUrl";
 import type { Message, Profile } from "@/lib/supabase/types";
 
 type Props = {
@@ -108,11 +110,14 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const uploadImage = useCallback(
     async (file: File) => {
       setSending(true);
-      const ext = file.name.split(".").pop() || "jpg";
+      const blob = await resizeImage(file, 1280, 0.82);
+      const isResized = blob !== file;
+      const ext = isResized ? "jpg" : file.name.split(".").pop() || "jpg";
+      const contentType = isResized ? "image/jpeg" : file.type;
       const path = `${userId}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("chat-images")
-        .upload(path, file, { contentType: file.type });
+        .upload(path, blob, { contentType });
       if (upErr) {
         setSending(false);
         return;
@@ -239,7 +244,7 @@ function ComposerImpl({
   }
 
   return (
-    <div className="flex-shrink-0 px-3.5 pb-3 pt-1.5">
+    <div className="flex-shrink-0 px-3.5 pt-1.5 pb-[max(env(safe-area-inset-bottom),14px)]">
       <div
         className="flex items-center gap-1 rounded-full bg-white p-1"
         style={{
@@ -363,27 +368,24 @@ function ChatBubbleImpl({
         </div>
       )}
       {msg.image_url ? (
-        <div
+        <img
+          src={transformUrl(msg.image_url, { width: 440, quality: 70, resize: "cover" })}
+          alt=""
+          width={220}
+          height={220}
+          loading="lazy"
+          decoding="async"
           style={{
-            position: "relative",
+            display: "block",
             width: 220,
-            aspectRatio: "1 / 1",
+            height: 220,
+            objectFit: "cover",
             borderRadius: 18,
-            overflow: "hidden",
             border: `3px solid ${PALETTE.ink}`,
             boxShadow: `0 3px 0 ${PALETTE.ink}`,
             background: "#f1efe8",
           }}
-        >
-          <Image
-            src={msg.image_url}
-            alt=""
-            fill
-            sizes="220px"
-            loading="lazy"
-            style={{ objectFit: "cover" }}
-          />
-        </div>
+        />
       ) : (
         <div
           className="text-sm font-semibold"

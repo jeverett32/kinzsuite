@@ -7,6 +7,7 @@ import { PartnerToggle } from "@/components/ui/PartnerToggle";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { PetPortrait } from "@/components/ui/PetPortrait";
 import { createClient } from "@/lib/supabase/client";
+import { resizeImage } from "@/lib/image";
 import { PALETTE, PET_TYPES, shade } from "@/lib/utils";
 import type { Pet, Profile } from "@/lib/supabase/types";
 
@@ -192,11 +193,14 @@ function NewPetModal({ userId, onClose }: { userId: string; onClose: () => void 
 
     let imageUrl: string | null = null;
     if (file) {
-      const ext = file.name.split(".").pop() || "jpg";
+      const blob = await resizeImage(file, 1024, 0.85);
+      const isResized = blob !== file;
+      const ext = isResized ? "jpg" : file.name.split(".").pop() || "jpg";
+      const contentType = isResized ? "image/jpeg" : file.type;
       const path = `${userId}/${crypto.randomUUID()}.${ext}`;
       const { error: upErr } = await supabase.storage
         .from("pets")
-        .upload(path, file, { contentType: file.type, upsert: false });
+        .upload(path, blob, { contentType, upsert: false });
       if (upErr) {
         setError(upErr.message);
         setSubmitting(false);
