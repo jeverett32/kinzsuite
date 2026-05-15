@@ -78,6 +78,16 @@ Goal: introduce group primitives without breaking existing data.
 
 ---
 
+## Phase 1.5 — Atomic group creation helper
+
+Goal: provide a secure path for initial group setup that bypasses RLS chicken-and-egg.
+
+- [x] `public.create_group(p_name text)` — creates group, adds owner, generates code, sets active
+- [x] `public.join_group_by_code(p_code text)` — validates invite, adds member, decrements uses
+- [x] `0018_create_group_helper_up.sql` / `_down.sql`
+
+---
+
 ## Phase 2 — Remove 2-User Assumptions
 
 Goal: strip the hardcoded "partner" model.
@@ -123,6 +133,25 @@ Goal: all access flows through `is_group_member`.
 - [x] `0017_rls_groups_up.sql` / `_down.sql`
 
 **Gate:** RLS test suite green on branch DB. Manual smoke test confirms John in group A cannot see group B messages.
+
+---
+
+## Phase 3.5 — Pets owner-only read
+
+Goal: pets stay user-owned; no cross-user read via group membership.
+
+### 3.5.1 Policy
+- [x] Drop global `pets readable by authed` SELECT policy (`0001`)
+- [x] Add `pets_select_owner`: `auth.uid() = owner_id`, `to authenticated`
+- [x] Leave insert / update / delete owner policies unchanged
+
+### 3.5.2 Migration files
+- [x] `0019_pets_owner_select_up.sql` / `_down.sql`
+
+### 3.5.3 Tests
+- [x] `rls_groups.sql`: user B cannot SELECT user A's pets
+
+**Gate:** RLS test suite includes pets read isolation after `0019`.
 
 ---
 
@@ -319,6 +348,7 @@ Goal: replace partner toggle with member pill strip.
 
 ## Open Decisions
 
+- [x] Pets visibility across group members: **owner-only SELECT** (`0019`); insert/update/delete remain owner-only. Pill-strip views query by selected `user_id`, not group.
 - [ ] Group rename allowed by all members or owner only? (default: owner)
 - [ ] Wheel quests / date wheel: per-member or per-group? (default: per-group)
 - [ ] Last-member-leaves: archive or hard-delete? (default: archive)

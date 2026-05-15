@@ -1,6 +1,6 @@
 -- ============================================================================
 -- KinzSuite — RLS group membership tests
--- Run after migrations 0013–0017 on a branch / local DB.
+-- Run after migrations 0013–0019 on a branch / local DB.
 --
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/rls_groups.sql
 -- ============================================================================
@@ -139,8 +139,18 @@ begin
     raise exception 'FAIL: A should see both groups under RLS (got %)', n;
   end if;
 
-  -- Pets: owner mutations only (policies unchanged from 0001)
+  -- Pets: owner-only SELECT (0019) and owner-only mutations (0001)
   perform _rls_test.set_auth(uid_b);
+  select count(*) into n from public.pets where id = pet_a;
+  if n <> 0 then
+    raise exception 'FAIL: B should not SELECT A pet (got %)', n;
+  end if;
+
+  select count(*) into n from public.pets where owner_id = uid_a;
+  if n <> 0 then
+    raise exception 'FAIL: B should not SELECT any of A pets (got %)', n;
+  end if;
+
   update public.pets set name = 'stolen' where id = pet_a;
   get diagnostics n = row_count;
   if n > 0 then
