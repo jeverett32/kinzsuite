@@ -24,6 +24,7 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -31,12 +32,25 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
   const partnerName = partner?.display_name || "Partner";
 
   const scrollToBottom = (behavior: ScrollBehavior = "instant") => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
+    // Small delay to allow layout to settle
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior, block: "end" });
+    }, 50);
   };
 
   useEffect(() => {
     void markChatRead();
   }, [markChatRead]);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      scrollToBottom();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const channel = supabase
@@ -58,10 +72,6 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
       supabase.removeChannel(channel);
     };
   }, [supabase, userId, markChatRead]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages.length]);
 
   async function send() {
     const text = draft.trim();
@@ -136,19 +146,22 @@ export function ChatView({ initialMessages, userId, profiles }: Props) {
         ref={scrollerRef}
         className="kz-hscroll flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3.5 pb-2 pt-1.5"
       >
-        {messages.map((m, i) => {
-          const sender = profiles.find((p) => p.id === m.sender_id);
-          return (
-            <ChatBubble
-              key={m.id}
-              msg={m}
-              prev={messages[i - 1]}
-              isMe={m.sender_id === userId}
-              senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
-              senderTone={sender?.accent_color ?? "sky"}
-            />
-          );
-        })}
+        <div ref={contentRef} className="flex flex-col gap-1.5">
+          {messages.map((m, i) => {
+            const sender = profiles.find((p) => p.id === m.sender_id);
+            return (
+              <ChatBubble
+                key={m.id}
+                msg={m}
+                prev={messages[i - 1]}
+                isMe={m.sender_id === userId}
+                senderName={m.sender_id === userId ? "You" : sender?.display_name || "Them"}
+                senderTone={sender?.accent_color ?? "sky"}
+              />
+            );
+          })}
+        </div>
+        <div ref={messagesEndRef} className="h-0" />
         {messages.length === 0 && (
           <div className="font-hand mx-auto mt-10 text-center text-lg" style={{ color: PALETTE.ink, opacity: 0.5 }}>
             no messages yet — say hi!

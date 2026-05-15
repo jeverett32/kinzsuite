@@ -167,7 +167,7 @@ export function AdministrationView({ userId, initialTasks, initialQuests }: Prop
   }
 
   return (
-    <div className="px-4 pb-28 pt-2">
+    <div className="kz-hscroll h-full overflow-y-auto px-4 pb-28 pt-2">
       <div className="mb-4 flex items-center gap-2">
         <Link
           href="/"

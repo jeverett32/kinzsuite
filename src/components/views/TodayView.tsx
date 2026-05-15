@@ -175,7 +175,7 @@ export function TodayView({ initialTasks, initialLog, initialProfiles, userId }:
   }
 
   return (
-    <div className="pb-6">
+    <div className="kz-hscroll h-full overflow-y-auto pb-6">
       <div className="flex items-end justify-between gap-2.5 px-4 pb-3 pt-1">
         <div className="min-w-0 flex-1">
           <div

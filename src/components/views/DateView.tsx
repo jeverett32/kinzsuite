@@ -442,7 +442,7 @@ export function DateView({ initialWheelQuests, initialAcceptedQuestId }: Props) 
   }
 
   return (
-    <div className="px-4 pb-6 pt-1">
+    <div className="kz-hscroll h-full overflow-y-auto px-4 pb-6 pt-1">
       <div
         className="relative w-full overflow-hidden rounded-2xl"
         style={{ aspectRatio: "5 / 4", border: `3px solid ${PALETTE.ink}` }}

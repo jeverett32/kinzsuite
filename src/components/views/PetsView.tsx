@@ -63,7 +63,7 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
       : pets.filter((p) => p.owner_id !== userId);
 
   return (
-    <div className="flex flex-1 flex-col pb-6">
+    <div className="kz-hscroll h-full overflow-y-auto flex flex-col pb-6">
       <div className="px-4 pb-3 pt-2">
         <div
           className="font-hand text-[44px] leading-none text-white"

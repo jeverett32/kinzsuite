@@ -51,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             avatarEmoji={profile?.avatar_emoji ?? "🙂"}
             accentColor={profile?.accent_color ?? "sky"}
           />
-          <main className="kz-hscroll relative z-10 min-h-0 flex-1 overflow-y-auto pb-4">
+          <main className="relative z-10 min-h-0 flex-1">
             {children}
           </main>
           <BottomNav />
