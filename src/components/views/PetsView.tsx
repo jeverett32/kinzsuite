@@ -63,7 +63,7 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
       : pets.filter((p) => p.owner_id !== userId);
 
   return (
-    <div className="kz-hscroll h-full overflow-y-auto flex flex-col pb-6">
+    <div className="kz-hscroll flex h-full min-h-0 flex-col overflow-y-auto pb-6">
       <div className="px-4 pb-3 pt-2">
         <div
           className="font-hand text-[44px] leading-none text-white"
@@ -84,9 +84,9 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
         />
       </div>
 
-      <div className="relative flex flex-1 items-center">
+      <div className="relative flex min-h-0 min-w-0 flex-1 items-center">
         <div
-          className="kz-hscroll flex w-full items-center gap-4 overflow-x-auto px-4 pb-6 pt-1.5"
+          className="kz-hscroll flex w-full min-w-0 items-center gap-4 overflow-x-auto overscroll-x-contain px-4 pb-6 pt-1.5"
           style={{ scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch" }}
         >
           {visiblePets.length === 0 && (
@@ -104,7 +104,7 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
           )}
 
           {visiblePets.map((p) => (
-            <div key={p.id} style={{ scrollSnapAlign: "center" }}>
+            <div key={p.id} className="shrink-0" style={{ scrollSnapAlign: "center" }}>
               <PolaroidCard
                 pet={p}
                 active={p.id === selectedId}
@@ -116,7 +116,7 @@ export function PetsView({ initialPets, userId, me, partner }: Props) {
           {side === "me" && (
             <button
               onClick={() => setShowNew(true)}
-              className="kz-sticker flex flex-col items-center justify-center gap-3.5"
+              className="kz-sticker flex shrink-0 flex-col items-center justify-center gap-3.5"
               style={{
                 ["--ink" as any]: PALETTE.ink,
                 width: 280,

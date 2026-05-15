@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { Cake } from "lucide-react";
 import { format } from "date-fns";
 import { PALETTE } from "@/lib/utils";
@@ -24,11 +25,28 @@ export function PolaroidCard({
   onClick?: () => void;
 }) {
   const gender = formatGender(pet.gender);
+  const [wiggling, setWiggling] = useState(false);
+
+  const handleClick = useCallback(() => {
+    setWiggling((playing) => {
+      if (playing) {
+        requestAnimationFrame(() => setWiggling(true));
+        return false;
+      }
+      return true;
+    });
+    onClick?.();
+  }, [onClick]);
 
   return (
     <button
-      onClick={onClick}
-      className={"kz-jiggle kz-sticker" + (active ? " kz-jiggle-active" : "")}
+      onClick={handleClick}
+      onAnimationEnd={() => setWiggling(false)}
+      className={
+        "kz-sticker " +
+        (active ? "kz-polaroid-active" : "kz-polaroid-rest") +
+        (wiggling ? " kz-wiggle-run" : "")
+      }
       style={{
         width: 280,
         padding: 14,
@@ -37,8 +55,7 @@ export function PolaroidCard({
         textAlign: "left",
         cursor: "pointer",
         flexShrink: 0,
-        transform: active ? "translateY(-4px) rotate(-1.2deg)" : "rotate(-0.6deg)",
-        transition: "transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s",
+        transition: wiggling ? undefined : "transform .25s cubic-bezier(.34,1.56,.64,1)",
       }}
     >
       <PetPortrait
