@@ -39,11 +39,19 @@ export function PolaroidCard({
   }, [onClick]);
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
       onAnimationEnd={() => setWiggling(false)}
       className={
-        "kz-sticker " +
+        "kz-sticker kz-polaroid-card " +
         (active ? "kz-polaroid-active" : "kz-polaroid-rest") +
         (wiggling ? " kz-wiggle-run" : "")
       }
@@ -93,6 +101,6 @@ export function PolaroidCard({
           )}
         </div>
       </div>
-    </button>
+    </div>
   );
 }

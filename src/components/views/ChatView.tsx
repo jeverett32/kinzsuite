@@ -370,19 +370,15 @@ function ChatBubbleImpl({
         <img
           src={msg.image_url}
           alt=""
-          width={220}
-          height={220}
           loading="lazy"
           decoding="async"
+          className="max-w-[220px]"
           style={{
             display: "block",
-            width: 220,
-            height: 220,
-            objectFit: "cover",
+            height: "auto",
             borderRadius: 18,
             border: `3px solid ${PALETTE.ink}`,
             boxShadow: `0 3px 0 ${PALETTE.ink}`,
-            background: "#f1efe8",
           }}
         />
       ) : (
