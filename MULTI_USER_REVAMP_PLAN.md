@@ -18,9 +18,9 @@ Goal: guarantee we can restore the current database byte-for-byte if anything go
 - [ ] Confirm point-in-time recovery (PITR) window covers planned migration date
 
 ### 0.2 Local logical dumps
-- [ ] `supabase db dump --schema-only -f backups/2026xxxx_schema.sql`
-- [ ] `supabase db dump --data-only   -f backups/2026xxxx_data.sql`
-- [ ] `supabase db dump --role-only   -f backups/2026xxxx_roles.sql`
+- [x] `supabase db dump --schema-only -f backups/2026xxxx_schema.sql`
+- [x] `supabase db dump --data-only   -f backups/2026xxxx_data.sql`
+- [x] `supabase db dump --role-only   -f backups/2026xxxx_roles.sql`
 - [ ] Verify dumps restore cleanly into a fresh local Postgres
 - [ ] Commit `backups/` dumps to a private branch (NOT main) or store off-repo
 
@@ -32,7 +32,7 @@ Goal: guarantee we can restore the current database byte-for-byte if anything go
 ### 0.4 Down-migration pairing rule
 - [ ] Adopt convention: every new `NNNN_*_up.sql` ships with `NNNN_*_down.sql`
 - [ ] Down scripts tested on branch before up runs on prod
-- [ ] Add CI check or local script `npm run migrate:verify-pairs`
+- [x] Add CI check or local script `npm run migrate:verify-pairs`
 
 **Gate:** Restore drill performed at least once on the branch DB. Confirmed identical row counts and schema diff = 0 vs. prod snapshot.
 
@@ -83,13 +83,13 @@ Goal: introduce group primitives without breaking existing data.
 Goal: strip the hardcoded "partner" model.
 
 ### 2.1 Triggers & constraints
-- [ ] Drop `0003_two_user_limit.sql` trigger and any helpers it installed
-- [ ] Search codebase for hardcoded partner UUIDs / `auth.users` count checks
+- [x] Drop `0003_two_user_limit.sql` trigger and any helpers it installed
+- [x] Search codebase for hardcoded partner UUIDs / `auth.users` count checks
 - [ ] Remove "partner" terminology from DB comments and policy names
 
 ### 2.2 Migration
-- [ ] `0016_remove_two_user_limit_up.sql` / `_down.sql`
-- [ ] Down script reinstalls the trigger exactly
+- [x] `0016_remove_two_user_limit_up.sql` / `_down.sql`
+- [x] Down script reinstalls the trigger exactly
 
 **Gate:** Inserting a 3rd `auth.users` row on branch DB succeeds.
 
