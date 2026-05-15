@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ChevronLeft, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { Avatar } from "@/components/ui/Avatar";
@@ -32,6 +32,14 @@ export function Header({
   const { hasUnreadChat } = useChatUnread();
   const onChatRoute = pathname === "/chat" || pathname.startsWith("/chat/");
 
+  const handleBack = useCallback(() => {
+    if (window.history.state?.idx > 0) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  }, [router]);
+
   return (
     <>
       <header
@@ -59,7 +67,7 @@ export function Header({
           {onChatRoute ? (
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="kz-chunky font-display inline-flex items-center justify-center gap-0"
               style={{
                 height: 40,
