@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CopyCodeButton } from "@/components/onboarding/CopyCodeButton";
-import { Bell, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Bell, BellOff, Pencil, Plus, Trash2, X } from "lucide-react";
 import { ChunkyButton } from "@/components/ui/ChunkyButton";
 import { createClient } from "@/lib/supabase/client";
 import { WHEEL_SLICE_COUNT } from "@/lib/quests";
@@ -11,6 +11,20 @@ import { PALETTE, shade } from "@/lib/utils";
 import type { Group } from "@/lib/groups";
 
 const ACCENTS: AccentColor[] = ["sky", "blush", "sun", "grass", "purple"];
+
+/** push permission state for this browser */
+type PushState = "checking" | "unsupported" | "subscribed" | "unsubscribed" | "denied" | "busy";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 function todayIso() {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -83,6 +97,8 @@ export function AdministrationView({
   const [adding, setAdding] = useState(false);
   const [pushTestBusy, setPushTestBusy] = useState(false);
   const [pushTestOk, setPushTestOk] = useState<string | null>(null);
+  const [pushState, setPushState] = useState<PushState>("checking");
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
 
   /** Edit sheet: draft copies so list state stays stable until Save. */
   const [taskDraft, setTaskDraft] = useState<DailyTask | null>(null);
@@ -240,6 +256,89 @@ export function AdministrationView({
       window.setTimeout(() => setPushTestOk(null), 8000);
     } finally {
       setPushTestBusy(false);
+    }
+  }
+
+  const refreshPushState = useCallback(async () => {
+    if (
+      !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+      typeof window === "undefined" ||
+      !("serviceWorker" in navigator) ||
+      !("PushManager" in window)
+    ) {
+      setPushState("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setPushState("denied");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      setPushState(existing && Notification.permission === "granted" ? "subscribed" : "unsubscribed");
+    } catch {
+      setPushState("unsubscribed");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "notifications") void refreshPushState();
+  }, [tab, refreshPushState]);
+
+  async function acceptPush() {
+    const vapid = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapid) return;
+    setPushMsg(null);
+    setPushState("busy");
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") {
+      setPushState(perm === "denied" ? "denied" : "unsubscribed");
+      setPushMsg("Notifications were not allowed in this browser.");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapid),
+        });
+      }
+      const res = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      if (!res.ok) {
+        setPushState("unsubscribed");
+        setPushMsg("Could not save the subscription. Try again.");
+        return;
+      }
+      setPushState("subscribed");
+      setPushMsg("Notifications on for this browser.");
+    } catch {
+      setPushState("unsubscribed");
+      setPushMsg("Could not enable notifications. Try again.");
+    }
+  }
+
+  async function denyPush() {
+    setPushMsg(null);
+    setPushState("busy");
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+        await sub.unsubscribe();
+      }
+      setPushState("unsubscribed");
+      setPushMsg("Notifications off for this browser.");
+    } catch {
+      setPushMsg("Could not turn off notifications. Try again.");
+      void refreshPushState();
     }
   }
 
@@ -672,6 +771,63 @@ export function AdministrationView({
       )}
 
       {tab === "notifications" && (
+        <>
+        <div
+          className="mt-4 rounded-3xl border-2 px-4 py-4"
+          style={{
+            borderColor: PALETTE.ink,
+            background: "rgba(255,255,255,0.88)",
+            boxShadow: `0 3px 0 ${PALETTE.ink}`,
+          }}
+        >
+          <div className="font-display text-sm tracking-wide" style={{ color: PALETTE.ink }}>
+            CHAT ALERTS
+          </div>
+          <p className="font-hand mt-1 text-xs leading-snug opacity-80" style={{ color: PALETTE.ink }}>
+            {pushState === "subscribed"
+              ? "This browser gets a push when new chat messages arrive."
+              : "Accept to get a push on this browser when new chat messages arrive."}
+          </p>
+          {pushState === "unsupported" && (
+            <p className="font-hand mt-2 text-xs leading-snug opacity-70" style={{ color: PALETTE.ink }}>
+              This browser does not support push notifications.
+            </p>
+          )}
+          {pushState === "denied" && (
+            <p className="font-hand mt-2 text-xs leading-snug opacity-70" style={{ color: PALETTE.ink }}>
+              Notifications are blocked in your browser settings — allow them there, then accept again.
+            </p>
+          )}
+          {pushState !== "unsupported" && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ChunkyButton
+                type="button"
+                color="grass"
+                size="sm"
+                disabled={pushState === "busy" || pushState === "subscribed" || pushState === "checking"}
+                icon={<Bell size={14} />}
+                onClick={() => void acceptPush()}
+              >
+                {pushState === "subscribed" ? "Accepted" : "Accept"}
+              </ChunkyButton>
+              <ChunkyButton
+                type="button"
+                color="white"
+                size="sm"
+                disabled={pushState === "busy" || pushState !== "subscribed"}
+                icon={<BellOff size={14} />}
+                onClick={() => void denyPush()}
+              >
+                Deny
+              </ChunkyButton>
+            </div>
+          )}
+          {pushMsg && (
+            <p className="font-hand mt-2 text-xs font-medium leading-snug" style={{ color: PALETTE.ink }}>
+              {pushMsg}
+            </p>
+          )}
+        </div>
         <div
           className="mt-4 rounded-3xl border-2 px-4 py-4"
           style={{
@@ -704,6 +860,7 @@ export function AdministrationView({
             </p>
           )}
         </div>
+        </>
       )}
 
       {taskDraft && (
